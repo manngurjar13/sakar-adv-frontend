@@ -1,5 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchServices } from "../store/slices/servicesSlice";
 import logo from "../../public/logo.png";
 
 const Header = () => {
@@ -9,6 +11,14 @@ const Header = () => {
   const [isAdvertisingOpen, setIsAdvertisingOpen] = useState(false);
   const [mobileDropdownsOpen, setMobileDropdownsOpen] = useState({});
   const location = useLocation();
+  const dispatch = useDispatch();
+  const { services } = useSelector((state) => state.services);
+
+  useEffect(() => {
+    if (services.length === 0) {
+      dispatch(fetchServices());
+    }
+  }, [dispatch, services.length]);
 
   const navigation = [
     { name: "Home", path: "/" },
@@ -20,18 +30,11 @@ const Header = () => {
     { name: "Contact", path: "/contact" },
   ];
 
-  const servicesDropdown = [
-    { name: "Vehicle Branding", path: "/services/vehicle-branding" },
-    { name: "Auto Rickshaw Ads", path: "/services/auto-rickshaw" },
-    { name: "E-Rickshaw Branding", path: "/services/e-rickshaw" },
-    { name: "Bus Advertising", path: "/services/bus-advertising" },
-    { name: "Mobile Van Ads", path: "/services/mobile-van" },
-    { name: "No Parking Board", path: "/services/no-parking-board" },
-    { name: "Hoarding", path: "/services/hoarding" },
-    { name: "Wall Panting", path: "/services/wall-panting" },
-    { name: "Lookwalker Activity", path: "/services/lookwalker-activity" },
-    { name: "Newspaper Insertion", path: "/services/newspaper-insertion" },
-  ];
+  // Create dynamic services dropdown from API
+  const servicesDropdown = services.map((service) => ({
+    name: service.service_name?.str1 || "Service",
+    path: `/services/${(service.service_name?.str1 || "service").toLowerCase().replace(/\s+/g, "-")}`,
+  }));
 
   const productsDropdown = [
     {
@@ -292,7 +295,7 @@ const Header = () => {
                         ? isAdvertisingOpen
                         : false) && (
                         <div
-                          className={`absolute top-full left-0 mt-2 bg-white rounded-xl shadow-xl border border-gray-100 py-3 z-50 animate-in slide-in-from-top-2 duration-200 ${
+                          className={`absolute top-full left-0 mt-0 bg-white rounded-xl shadow-xl border border-gray-100 py-3 z-50 animate-in slide-in-from-top-2 duration-200 ${
                             (
                               item.name === "Products"
                                 ? productsSplit.showTwoColumns

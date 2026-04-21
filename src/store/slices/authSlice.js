@@ -6,11 +6,13 @@ export const loginAdmin = createAsyncThunk(
   'auth/loginAdmin',
   async ({ email, password }, { rejectWithValue }) => {
     try {
+      console.log('Attempting login with:', { email, password })
       const response = await api.post('/auth/login', {
         email,
         password
       })
       
+      console.log('Login response:', response.data)
       const { token, admin } = response.data
       
       // Store token and admin data in localStorage
@@ -19,7 +21,9 @@ export const loginAdmin = createAsyncThunk(
       
       return { token, admin }
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Login failed')
+      console.error('Login error:', error.response?.data || error.message)
+      const errorMessage = error.response?.data?.message || error.response?.data?.error || 'Login failed'
+      return rejectWithValue(errorMessage)
     }
   }
 )

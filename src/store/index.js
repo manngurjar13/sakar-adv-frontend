@@ -11,6 +11,8 @@ import contactsSlice from './slices/contactsSlice'
 import contactConfigSlice from './slices/contactConfigSlice'
 import eventBannerSlice from './slices/eventBannerSlice'
 import upcomingEventSlice from './slices/upcomingEventSlice'
+import servicesSlice from './slices/servicesSlice'
+import advertisingSlice from './slices/advertisingSlice'
 
 // Persist configuration for auth slice only
 const persistConfig = {
@@ -29,6 +31,8 @@ const rootReducer = combineReducers({
   contactConfig: contactConfigSlice,
   eventBanners: eventBannerSlice,
   upcomingEvents: upcomingEventSlice,
+  services: servicesSlice,
+  advertising: advertisingSlice,
 })
 
 const persistedReducer = persistReducer(persistConfig, rootReducer)

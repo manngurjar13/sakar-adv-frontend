@@ -34,6 +34,14 @@ const AdminLayout = ({ children }) => {
         { name: 'Upcoming Events', href: '/admin/upcoming-events' }
       ]
     },
+    {
+      name: 'Services',
+      icon: Cog6ToothIcon,
+      submenu: [
+        { name: 'Manage Services', href: '/admin/services' },
+        { name: 'Create New Service', href: '/admin/services/create' }
+      ]
+    },
     { name: 'Testimonials', href: '/admin/testimonials', icon: ChatBubbleLeftRightIcon },
     { name: 'Portfolio', href: '/admin/portfolio', icon: PhotoIcon },
     { name: 'Contacts', href: '/admin/contacts', icon: UserGroupIcon },

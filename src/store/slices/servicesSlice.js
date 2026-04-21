@@ -1,38 +1,16 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
-import axios from 'axios'
+import api from '../../config/api'
 
 // Async thunks for services CRUD operations
 export const fetchServices = createAsyncThunk(
   'services/fetchServices',
   async (_, { rejectWithValue }) => {
     try {
-      // Mock data for development
-      await new Promise(resolve => setTimeout(resolve, 500))
-      const mockData = [
-        {
-          id: 1,
-          name: 'Vehicle Branding',
-          description: 'Professional vehicle branding services for maximum brand visibility',
-          category: 'vehicle-branding',
-          price: 12000,
-          status: 'active',
-          image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=500',
-          features: ['High-quality vinyl', 'Weather resistant', 'Professional installation', 'Mobile advertising']
-        },
-        {
-          id: 2,
-          name: 'Auto Rickshaw Advertising',
-          description: 'Effective auto rickshaw advertising for local market reach',
-          category: 'auto-rickshaw',
-          price: 5000,
-          status: 'active',
-          image: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=500',
-          features: ['Local reach', 'Cost effective', 'High visibility', 'Targeted audience']
-        }
-      ]
-      return mockData
+      const response = await api.get('/admin/services')
+      return response.data.services
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to fetch services')
+      console.error('Fetch services error:', error)
+      return rejectWithValue(error.response?.data?.error || 'Failed to fetch services')
     }
   }
 )
@@ -41,15 +19,43 @@ export const createService = createAsyncThunk(
   'services/createService',
   async (serviceData, { rejectWithValue }) => {
     try {
-      await new Promise(resolve => setTimeout(resolve, 500))
-      const newService = {
-        id: Date.now(),
-        ...serviceData,
-        createdAt: new Date().toISOString()
+      // Create FormData for multipart upload
+      const formData = new FormData()
+      
+      // Add basic fields
+      formData.append('category', serviceData.category)
+      formData.append('description', serviceData.description)
+      formData.append('feature_description', serviceData.feature_description)
+      
+      // Add objects as JSON strings (backend expects this)
+      formData.append('service_name', JSON.stringify(serviceData.service_name))
+      formData.append('feature_heading', JSON.stringify(serviceData.feature_heading))
+      formData.append('feature', JSON.stringify(serviceData.feature))
+      
+      // Add main image if it's a file
+      if (serviceData.imageFile) {
+        formData.append('image', serviceData.imageFile)
       }
-      return newService
+      
+      // Add feature images
+      if (serviceData.feature && Array.isArray(serviceData.feature)) {
+        serviceData.feature.forEach((feat, index) => {
+          if (feat.imageFile) {
+            formData.append(`feature-image-${index}`, feat.imageFile)
+          }
+        })
+      }
+      
+      const response = await api.post('/admin/services', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      })
+      
+      return response.data.service
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to create service')
+      console.error('Create service error:', error)
+      return rejectWithValue(error.response?.data?.error || 'Failed to create service')
     }
   }
 )
@@ -58,15 +64,43 @@ export const updateService = createAsyncThunk(
   'services/updateService',
   async ({ id, serviceData }, { rejectWithValue }) => {
     try {
-      await new Promise(resolve => setTimeout(resolve, 500))
-      const updatedService = {
-        id,
-        ...serviceData,
-        updatedAt: new Date().toISOString()
+      // Create FormData for multipart upload
+      const formData = new FormData()
+      
+      // Add basic fields
+      formData.append('category', serviceData.category)
+      formData.append('description', serviceData.description)
+      formData.append('feature_description', serviceData.feature_description)
+      
+      // Add objects as JSON strings (backend expects this)
+      formData.append('service_name', JSON.stringify(serviceData.service_name))
+      formData.append('feature_heading', JSON.stringify(serviceData.feature_heading))
+      formData.append('feature', JSON.stringify(serviceData.feature))
+      
+      // Add main image if it's a file
+      if (serviceData.imageFile) {
+        formData.append('image', serviceData.imageFile)
       }
-      return updatedService
+      
+      // Add feature images
+      if (serviceData.feature && Array.isArray(serviceData.feature)) {
+        serviceData.feature.forEach((feat, index) => {
+          if (feat.imageFile) {
+            formData.append(`feature-image-${index}`, feat.imageFile)
+          }
+        })
+      }
+      
+      const response = await api.put(`/admin/services/${id}`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      })
+      
+      return response.data.service
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to update service')
+      console.error('Update service error:', error)
+      return rejectWithValue(error.response?.data?.error || 'Failed to update service')
     }
   }
 )
@@ -75,7 +109,7 @@ export const deleteService = createAsyncThunk(
   'services/deleteService',
   async (id, { rejectWithValue }) => {
     try {
-      await new Promise(resolve => setTimeout(resolve, 500))
+      await api.delete(`/admin/services/${id}`)
       return id
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Failed to delete service')
@@ -141,7 +175,7 @@ const servicesSlice = createSlice({
       })
       .addCase(updateService.fulfilled, (state, action) => {
         state.loading = false
-        const index = state.services.findIndex(service => service.id === action.payload.id)
+        const index = state.services.findIndex(service => service._id === action.payload._id || service.id === action.payload.id)
         if (index !== -1) {
           state.services[index] = action.payload
         }
@@ -158,7 +192,7 @@ const servicesSlice = createSlice({
       })
       .addCase(deleteService.fulfilled, (state, action) => {
         state.loading = false
-        state.services = state.services.filter(service => service.id !== action.payload)
+        state.services = state.services.filter(service => service._id !== action.payload && service.id !== action.payload)
         state.error = null
       })
       .addCase(deleteService.rejected, (state, action) => {

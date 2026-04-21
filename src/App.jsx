@@ -35,6 +35,8 @@ import ContactConfig from "./pages/admin/ContactConfig";
 import EventBannerList from "./pages/admin/EventBannerList";
 import UpcomingEventList from "./pages/admin/UpcomingEventList";
 import ProtectedRoute from "./components/admin/ProtectedRoute";
+import ServicesList from "./pages/admin/ServicesList";
+import DynamicServiceDetail from "./pages/services/DynamicServiceDetail";
 
 // Public service subpages
 import VehicleBranding from "./pages/services/VehicleBranding";
@@ -65,6 +67,7 @@ import NewspaperInsertion from "./pages/services/NewspaperInsertion";
 import AllTypesPrintingWork from "./pages/products/AllTypesPrintingWork";
 import Standy from "./pages/products/Standy";
 import FlangeBoard from "./pages/products/FlangeBoard";
+import ServiceForm from "./pages/admin/ServiceForm";
 
 function AppLayout({ children }) {
   const location = useLocation();
@@ -274,6 +277,47 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+              {/* Admin Services Routes */}
+              <Route
+                path="/admin/services"
+                element={
+                  <ProtectedRoute>
+                    <AdminLayout>
+                      <ServicesList />
+                    </AdminLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/services/create"
+                element={
+                  <ProtectedRoute>
+                    <AdminLayout>
+                      <ServiceForm />
+                    </AdminLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/services/:id"
+                element={
+                  <ProtectedRoute>
+                    <AdminLayout>
+                      <ServiceForm />
+                    </AdminLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/services/:id/edit"
+                element={
+                  <ProtectedRoute>
+                    <AdminLayout>
+                      <ServiceForm />
+                    </AdminLayout>
+                  </ProtectedRoute>
+                }
+              />
 
               {/* Admin Event Management Routes */}
               <Route
@@ -299,10 +343,6 @@ function App() {
 
               {/* Redirect removed admin modules to events page */}
               <Route
-                path="/admin/services"
-                element={<Navigate to="/admin/events" replace />}
-              />
-              <Route
                 path="/admin/products"
                 element={<Navigate to="/admin/events" replace />}
               />
@@ -311,7 +351,7 @@ function App() {
                 element={<Navigate to="/admin/events" replace />}
               />
 
-              {/* Service Submenu Routes */}
+              {/* Legacy Service Submenu Routes (kept for backwards compatibility) */}
               <Route
                 path="/services/vehicle-branding"
                 element={<VehicleBranding />}
@@ -342,6 +382,12 @@ function App() {
               <Route
                 path="/services/newspaper-insertion"
                 element={<NewspaperInsertion />}
+              />
+
+              {/* Dynamic Service Detail Route (matches any other service slug) */}
+              <Route
+                path="/services/:slug"
+                element={<DynamicServiceDetail />}
               />
 
               {/* Product Submenu Routes */}
