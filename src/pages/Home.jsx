@@ -9,10 +9,60 @@ import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
 
-import Banner1 from "../../public/banner1.jpg";
-import Banner2 from "../../public/banner2.jpg";
-import Banner3 from "../../public/banner3.jpg";
-import Banner4 from "../../public/banner4.jpg";
+import Banner1 from "../../public/finalNew.png";
+import Banner2 from "../../public/finalNew2.png";
+import Banner3 from "../../public/finalNew4.png";
+import Banner4 from "../../public/finalNew3.png";
+
+// Custom styles for mobile swiper buttons
+const swiperButtonStyles = `
+  @media (max-width: 768px) {
+    .swiper-button-prev,
+    .swiper-button-next {
+      width: 32px !important;
+      height: 32px !important;
+      top: 50% !important;
+      transform: translateY(-50%);
+      font-size: 12px !important;
+    }
+    
+    .swiper-button-prev::after,
+    .swiper-button-next::after {
+      font-size: 12px !important;
+    }
+  }
+
+  /* Pagination indicators styling */
+  .swiper-pagination {
+    position: absolute !important;
+    bottom: 20px !important;
+    width: 100% !important;
+    display: flex !important;
+    justify-content: center !important;
+    z-index: 10 !important;
+  }
+
+  .swiper-pagination-bullet {
+    background-color: #2563eb !important;
+    opacity: 0.6 !important;
+    width: 12px !important;
+    height: 12px !important;
+    margin: 0 6px !important;
+    transition: all 0.3s ease !important;
+  }
+
+  .swiper-pagination-bullet-active {
+    background-color: #1e40af !important;
+    opacity: 1 !important;
+    width: 32px !important;
+    border-radius: 10px !important;
+  }
+
+  .swiper-pagination-bullet:hover {
+    background-color: #1e40af !important;
+    opacity: 0.9 !important;
+  }
+`
 
 const Home = () => {
   const dispatch = useDispatch();
@@ -23,8 +73,9 @@ const Home = () => {
   }, [dispatch]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <section className="relative w-full overflow-hidden">
+    <div className="min-h-screen bg-gray-50  ">
+      <style>{swiperButtonStyles}</style>
+      <section className="relative w-full overflow-hidden mb-2">
         <Swiper
           modules={[Navigation, Pagination, Autoplay]}
           spaceBetween={0}
@@ -33,43 +84,43 @@ const Home = () => {
           pagination={{ clickable: true }}
           autoplay={{ delay: 5000, disableOnInteraction: false }}
           loop={true}
-          className="w-full banner-swiper"
+          // className="w-full banner-swiper"
         >
           <SwiperSlide>
-            <div className="w-full h-[45vw] min-h-[220px] max-h-[85vh]">
+            <div className="w-full" style={{ aspectRatio: '3260 / 1312' }}>
               <img
                 src={Banner1}
-                className="w-full h-full object-cover object-center block"
+                className="w-full h-full object-contain object-center block bg-gray-200"
                 alt="Banner 1"
               />
             </div>
           </SwiperSlide>
 
           <SwiperSlide>
-            <div className="w-full h-[45vw] min-h-[220px] max-h-[85vh]">
+            <div className="w-full" style={{ aspectRatio: '3260 / 1312' }}>
               <img
                 src={Banner2}
-                className="w-full h-full object-cover object-center block"
+                className="w-full h-full object-contain object-center block bg-gray-200"
                 alt="Banner 2"
               />
             </div>
           </SwiperSlide>
 
           <SwiperSlide>
-            <div className="w-full h-[45vw] min-h-[220px] max-h-[85vh]">
+            <div className="w-full" style={{ aspectRatio: '3260 / 1312' }}>
               <img
                 src={Banner3}
-                className="w-full h-full object-cover object-center block"
+                className="w-full h-full object-contain object-center block bg-gray-200"
                 alt="Banner 3"
               />
             </div>
           </SwiperSlide>
 
           <SwiperSlide>
-            <div className="w-full h-[45vw] min-h-[220px] max-h-[85vh]">
+            <div className="w-full" style={{ aspectRatio: '3260 / 1312' }}>
               <img
                 src={Banner4}
-                className="w-full h-full object-cover object-center block"
+                className="w-full h-full object-contain object-center block bg-gray-200"
                 alt="Banner 4"
               />
             </div>

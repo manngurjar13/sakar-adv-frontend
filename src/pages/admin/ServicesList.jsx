@@ -1,27 +1,21 @@
 import React, { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Link } from 'react-router-dom'
-import { Formik, Form, Field } from 'formik'
-import * as Yup from 'yup'
+import toast from 'react-hot-toast'
 import {
   PlusIcon,
   PencilIcon,
   TrashIcon,
-  EyeIcon,
-  MagnifyingGlassIcon,
-  FunnelIcon,
-  XMarkIcon,
+  ArrowLeftIcon,
 } from '@heroicons/react/24/outline'
-import { fetchServices, deleteService, createService, updateService } from '../../store/slices/servicesSlice'
+import { fetchServices, deleteService } from '../../store/slices/servicesSlice'
 
 const ServicesList = () => {
   const dispatch = useDispatch()
-  const { services, loading, error } = useSelector((state) => state.services)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [filterStatus, setFilterStatus] = useState('all')
+  const servicesState = useSelector((state) => state.services)
+  const services = servicesState?.services || []
+  const loading = servicesState?.loading || false
   const [deleteConfirm, setDeleteConfirm] = useState(null)
-  const [showModal, setShowModal] = useState(false)
-  const [editingService, setEditingService] = useState(null)
 
   useEffect(() => {
     dispatch(fetchServices())
@@ -30,18 +24,13 @@ const ServicesList = () => {
   const handleDelete = async (id) => {
     try {
       await dispatch(deleteService(id)).unwrap()
+      toast.success('Service deleted successfully!')
       setDeleteConfirm(null)
     } catch (error) {
       console.error('Delete failed:', error)
+      toast.error('Failed to delete service. Please try again.')
     }
   }
-
-  const filteredServices = services.filter((service) => {
-    const matchesSearch = service.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         service.description.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesFilter = filterStatus === 'all' || service.status === filterStatus
-    return matchesSearch && matchesFilter
-  })
 
   if (loading) {
     return (
@@ -52,161 +41,155 @@ const ServicesList = () => {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="md:flex md:items-center md:justify-between">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">
-            Services Management
+          <h2 className="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate">
+            Manage Services
           </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Manage your advertising services and offerings
+          <p className="mt-1 text-sm text-gray-500">
+            View, edit, and manage all services
           </p>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="inline-flex items-center px-3 sm:px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 w-full sm:w-auto justify-center"
-        >
-          <PlusIcon className="h-4 w-4 mr-2" />
-          Add Service
-        </button>
-      </div>
-
-      {/* Search and Filters */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
-            </div>
-            <input
-              type="text"
-              placeholder="Search services..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-            />
-          </div>
-          <div className="relative">
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="block w-full pl-3 pr-10 py-3 text-base border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm rounded-md"
-            >
-              <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-              <option value="draft">Draft</option>
-            </select>
-          </div>
+        <div className="mt-4 md:mt-0">
+          <Link
+            to="/admin/services/create"
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
+          >
+            <PlusIcon className="h-5 w-5 mr-2" />
+            Create New Service
+          </Link>
         </div>
       </div>
 
       {/* Services Table */}
-      <div className="bg-white shadow overflow-hidden sm:rounded-md">
-        <div className="px-4 py-5 sm:px-6">
-          <h3 className="text-lg leading-6 font-medium text-gray-900">
-            Services ({filteredServices.length})
-          </h3>
-          <p className="mt-1 max-w-2xl text-sm text-gray-500">
-            A list of all services in your system
-          </p>
-        </div>
-        <ul className="divide-y divide-gray-200">
-          {filteredServices.length === 0 ? (
-            <li className="px-4 py-8 text-center text-gray-500">
-              No services found. Create your first service to get started.
-            </li>
-          ) : (
-            filteredServices.map((service) => (
-              <li key={service.id}>
-                <div className="px-4 py-4 flex items-center justify-between hover:bg-gray-50">
-                  <div className="flex items-center">
-                    <div className="flex-shrink-0 h-10 w-10">
-                      <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                        <span className="text-sm font-medium text-blue-600">
-                          {service.name.charAt(0).toUpperCase()}
+      <div className="bg-white shadow rounded-lg overflow-hidden">
+        {services && services.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Service Name
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Category
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Description
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Image
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Features
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {services.map((service) => (
+                  <tr key={service._id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium text-gray-900">
+                          {service.service_name?.str1} {service.service_name?.str2}
+                        </span>
+                        <span className="text-xs text-gray-400">
+                          {service._id}
                         </span>
                       </div>
-                    </div>
-                    <div className="ml-4">
-                      <div className="text-sm font-medium text-gray-900">
-                        {service.name}
-                      </div>
-                      <div className="text-sm text-gray-500">
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="inline-flex px-3 py-1 text-xs font-semibold leading-5 rounded-full bg-blue-100 text-blue-800 capitalize">
+                        {service.category}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <p className="text-sm text-gray-600 line-clamp-2 max-w-xs">
                         {service.description}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      service.status === 'active' 
-                        ? 'bg-green-100 text-green-800'
-                        : service.status === 'inactive'
-                        ? 'bg-red-100 text-red-800'
-                        : 'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {service.status}
-                    </span>
-                    <div className="flex space-x-1">
+                      </p>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {service.image ? (
+                        <img
+                          src={service.image}
+                          alt={service.service_name?.str1}
+                          className="h-10 w-10 rounded object-cover"
+                          onError={(e) => {
+                            e.target.src = 'https://via.placeholder.com/40'
+                          }}
+                        />
+                      ) : (
+                        <span className="text-sm text-gray-500">No image</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="text-sm text-gray-700">
+                        {service.feature?.length || 0} features
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2 flex">
                       <Link
-                        to={`/admin/services/${service.id}`}
-                        className="text-blue-600 hover:text-blue-900 p-1 rounded"
-                        title="View"
-                      >
-                        <EyeIcon className="h-4 w-4" />
-                      </Link>
-                      <Link
-                        to={`/admin/services/${service.id}/edit`}
-                        className="text-gray-600 hover:text-gray-900 p-1 rounded"
+                        to={`/admin/services/${service._id}`}
+                        className="text-blue-600 hover:text-blue-900 p-2 hover:bg-blue-50 rounded transition-colors"
                         title="Edit"
                       >
-                        <PencilIcon className="h-4 w-4" />
+                        <PencilIcon className="h-5 w-5" />
                       </Link>
                       <button
-                        onClick={() => setDeleteConfirm(service.id)}
-                        className="text-red-600 hover:text-red-900 p-1 rounded"
+                        onClick={() => setDeleteConfirm(service._id)}
+                        className="text-red-600 hover:text-red-900 p-2 hover:bg-red-50 rounded transition-colors"
                         title="Delete"
                       >
-                        <TrashIcon className="h-4 w-4" />
+                        <TrashIcon className="h-5 w-5" />
                       </button>
-                    </div>
-                  </div>
-                </div>
-              </li>
-            ))
-          )}
-        </ul>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <p className="text-gray-500 text-base mb-4">No services found</p>
+            <Link
+              to="/admin/services/create"
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+            >
+              <PlusIcon className="h-5 w-5 mr-2" />
+              Create First Service
+            </Link>
+          </div>
+        )}
       </div>
 
       {/* Delete Confirmation Modal */}
       {deleteConfirm && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
           <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-            <div className="mt-3 text-center">
-              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
-                <TrashIcon className="h-6 w-6 text-red-600" />
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 mt-4">Delete Service</h3>
-              <div className="mt-2 px-7 py-3">
-                <p className="text-sm text-gray-500">
-                  Are you sure you want to delete this service? This action cannot be undone.
-                </p>
-              </div>
-              <div className="items-center px-4 py-3">
-                <button
-                  onClick={() => handleDelete(deleteConfirm)}
-                  className="px-4 py-2 bg-red-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-300 mr-2"
-                >
-                  Delete
-                </button>
-                <button
-                  onClick={() => setDeleteConfirm(null)}
-                  className="mt-3 px-4 py-2 bg-gray-300 text-gray-800 text-base font-medium rounded-md w-full shadow-sm hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300"
-                >
-                  Cancel
-                </button>
-              </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-4">
+              Delete Service?
+            </h3>
+            <p className="text-sm text-gray-500 mb-4">
+              Are you sure you want to delete this service? This action cannot be undone.
+            </p>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setDeleteConfirm(null)}
+                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleDelete(deleteConfirm)}
+                className="px-4 py-2 bg-red-600 text-white rounded-md text-sm font-medium hover:bg-red-700"
+              >
+                Delete
+              </button>
             </div>
           </div>
         </div>

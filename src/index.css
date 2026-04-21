@@ -2,6 +2,78 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer components {
+  .banner-swiper .swiper-button-prev,
+  .banner-swiper .swiper-button-next {
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 9999px;
+    background-color: rgba(0, 0, 0, 0.4);
+  }
+
+  .banner-swiper .swiper-button-prev::after,
+  .banner-swiper .swiper-button-next::after {
+    font-size: 12px;
+  }
+}
+
+/* Banner Swiper Styles */
+.banner-swiper {
+  width: 100%;
+  height: auto;
+}
+
+.banner-swiper .swiper-slide {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.banner-swiper img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+
+/* Mobile Devices (320px - 480px) */
+@media (max-width: 480px) {
+  .banner-swiper .swiper-slide div {
+    height: 12rem;
+  }
+}
+
+/* Tablets (481px - 768px) */
+@media (min-width: 481px) and (max-width: 768px) {
+  .banner-swiper .swiper-slide div {
+    height: 14rem;
+  }
+}
+
+/* Small Laptops (769px - 1024px) */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .banner-swiper .swiper-slide div {
+    height: 20rem;
+  }
+}
+
+/* Large Laptops (1025px - 1280px) */
+@media (min-width: 1025px) and (max-width: 1280px) {
+  .banner-swiper .swiper-slide div {
+    height: 24rem;
+  }
+}
+
+/* Extra Large Screens (1281px+) */
+@media (min-width: 1281px) {
+  .banner-swiper .swiper-slide div {
+    height: 100vh;
+    max-height: 90vh;
+  }
+}
+
 @layer utilities {
   @keyframes fade-in {
     from {
