@@ -75,8 +75,8 @@ const DynamicServiceDetail = () => {
   const imageUrl = (typeof service.image === 'string' ? service.image : service.image?.url) || 'https://images.unsplash.com/photo-1553531088-d5b11e10e979?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80'
   
   // Debug: log the image URL
-  console.log('Service Image:', service.image)
-  console.log('Final Image URL:', imageUrl)
+  console.log('Service Imageeee:', service.image)
+  console.log('Final Image URLllll:', imageUrl)
 
   return (
     <div className="min-h-screen bg-gray-50">
