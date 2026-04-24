@@ -356,7 +356,7 @@ function App() {
                 path="/services/vehicle-branding"
                 element={<VehicleBranding />}
               />
-              <Route
+              {/* <Route
                 path="/services/auto-rickshaw"
                 element={<AutoRickshaw />}
               />
@@ -382,7 +382,7 @@ function App() {
               <Route
                 path="/services/newspaper-insertion"
                 element={<NewspaperInsertion />}
-              />
+              /> */}
 
               {/* Dynamic Service Detail Route (matches any other service slug) */}
               <Route
