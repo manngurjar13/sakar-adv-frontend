@@ -71,6 +71,12 @@ const DynamicServiceDetail = () => {
   const serviceSubtitle = service.service_name?.str2 || ''
   const description = service.description || ''
   const categoryName = service.category || 'Service'
+  const featureList = service.feature || service.features || []
+  const featureTitle1 = service.feature_heading?.str1 || 'Why Choose Our'
+  const featureTitle2 = service.feature_heading?.str2 || serviceTitle
+  const featureDescription =
+    service.feature_description ||
+    'Professional service delivery that brings maximum impact and value to your business.'
   // Handle image - it could be a string or nested object
   const imageUrl = (typeof service.image === 'string' ? service.image : service.image?.url) || 'https://images.unsplash.com/photo-1553531088-d5b11e10e979?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80'
   
@@ -116,23 +122,23 @@ const DynamicServiceDetail = () => {
       </section>
 
       {/* Features Section */}
-      {service.features && service.features.length > 0 && (
+      {featureList.length > 0 && (
         <section className="py-16 sm:py-20 bg-white">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-12 sm:mb-16">
               <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-6">
-                Why Choose Our
-                <span className="bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent"> {serviceTitle}</span>
+                {featureTitle1}
+                <span className="bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent"> {featureTitle2}</span>
               </h2>
               <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-                Professional service delivery that brings maximum impact and value to your business.
+                {featureDescription}
               </p>
             </div>
 
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {service.features.map((feature, index) => (
+              {featureList.map((feature, index) => (
                 <div 
-                  key={index}
+                  key={feature._id || index}
                   className="group relative bg-white rounded-2xl shadow-lg border border-gray-100 p-8 hover:shadow-xl transition-all duration-300 transform hover:scale-105"
                 >
                   <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mb-6">
@@ -141,10 +147,10 @@ const DynamicServiceDetail = () => {
                     </svg>
                   </div>
                   <h3 className="text-xl font-bold text-gray-900 mb-4">
-                    {feature.feature_heading?.str1 || `Feature ${index + 1}`}
+                    {feature.title || feature.feature_heading?.str1 || `Feature ${index + 1}`}
                   </h3>
                   <p className="text-gray-600 leading-relaxed">
-                    {feature.feature_heading?.str2 || 'Professional service with quality assurance'}
+                    {feature.description || feature.feature_heading?.str2 || 'Professional service with quality assurance'}
                   </p>
                 </div>
               ))}
