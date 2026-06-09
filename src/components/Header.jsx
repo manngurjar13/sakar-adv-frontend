@@ -105,7 +105,7 @@ const Header = () => {
             <div className="flex items-center gap-2 sm:gap-3">
               <span className="hidden sm:inline-block text-white/80 text-xs font-medium mr-1">Follow Us:</span>
               <Link 
-                to="https://facebook.com" 
+                to="https://www.facebook.com/people/Sakar-Advertisement-and-marketing-solution/100064138714544/?mibextid=wwXIfr&rdid=sBD6XQtg60HBktOq&share_url=https%3A%2F%2Fwww.facebook.com%2Fshare%2F18gMdHXfve%2F%3Fmibextid%3DwwXIfr" 
                 target="_blank"
                 rel="noopener noreferrer"
                 className="group relative h-9 w-9 sm:h-10 sm:w-10 flex items-center justify-center bg-white/10 backdrop-blur-sm rounded-full border border-white/20 hover:bg-blue-500 hover:border-blue-400 hover:scale-110 transition-all duration-300"
@@ -124,21 +124,21 @@ const Header = () => {
               </Link>
               
               <Link 
-                to="https://google.com" 
+                to="https://www.instagram.com/sakar_advertisement?utm_source=qr" 
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group relative h-9 w-9 sm:h-10 sm:w-10 flex items-center justify-center bg-white/10 backdrop-blur-sm rounded-full border border-white/20 hover:bg-red-500 hover:border-red-400 hover:scale-110 transition-all duration-300"
-                aria-label="Google"
+                className="group relative h-9 w-9 sm:h-10 sm:w-10 flex items-center justify-center bg-white/10 backdrop-blur-sm rounded-full border border-white/20 hover:bg-pink-500 hover:border-pink-400 hover:scale-110 transition-all duration-300"
+                aria-label="Instagram"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   viewBox="0 0 640 640"
                   className="h-5 w-5 sm:h-5 sm:w-5 text-white group-hover:scale-110 transition-transform duration-300"
                 >
-                  <path fill="currentColor" d="M386.3 292.5C388.1 302.2 389.4 311.9 389.4 324.5C389.4 434.3 315.8 512 205 512C98.9 512 13 426.1 13 320C13 213.9 98.9 128 205 128C256.9 128 300.1 146.9 333.6 178.3L281.5 228.3C267.4 214.7 242.5 198.7 205 198.7C139.5 198.7 86.1 252.9 86.1 320C86.1 387.1 139.5 441.3 205 441.3C281 441.3 309.5 386.6 314 358.5L205 358.5L205 292.5L386.3 292.5L386.3 292.5zM571.7 298.9L571.7 243.2L515.7 243.2L515.7 298.9L460 298.9L460 354.9L515.7 354.9L515.7 410.6L571.7 410.6L571.7 354.9L627.4 354.9L627.4 298.9L571.7 298.9z" />
+                  <path fill="currentColor" d="M160 64H480C533 64 576 106.98 576 160V480C576 533 533 576 480 576H160C106.98 576 64 533 64 480V160C64 106.98 106.98 64 160 64ZM320 200C239.06 200 176 263.06 176 344C176 424.94 239.06 488 320 488C400.94 488 464 424.94 464 344C464 263.06 400.94 200 320 200ZM320 424C279.06 424 248 392.94 248 352C248 311.06 279.06 280 320 280C360.94 280 392 311.06 392 352C392 392.94 360.94 424 320 424ZM460.08 200C468.07 200 474.59 193.48 474.59 185.49C474.59 177.5 468.07 170.98 460.08 170.98C452.09 170.98 445.57 177.5 445.57 185.49C445.57 193.48 452.09 200 460.08 200Z" />
                 </svg>
                 <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap pointer-events-none">
-                  Google+
+                  Instagram
                 </div>
               </Link>
               
