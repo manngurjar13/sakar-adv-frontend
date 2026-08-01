@@ -2,6 +2,7 @@ import React, { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { fetchServices } from '../store/slices/servicesSlice'
+import { getImageUrl } from '../utils/imageUtils'
 
 const Services = () => {
   const dispatch = useDispatch()
@@ -88,10 +89,10 @@ const Services = () => {
           {services && services.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {services.map((service) => (
-                <div key={service._id} className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
+                <div key={service.id} className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
                   <div className="relative">
                     <img
-                      src={service.image_url || 'https://images.unsplash.com/photo-1553531088-d5b11e10e979?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80'}
+                      src={getImageUrl(service.image || service.image_url) || 'https://images.unsplash.com/photo-1553531088-d5b11e10e979?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80'}
                       alt={service.service_name?.str1 || 'Service'}
                       className="w-full h-48 object-cover"
                     />
@@ -111,19 +112,19 @@ const Services = () => {
                     <p className="text-gray-600 mb-4">
                       {service.description || 'Professional service with quality assurance'}
                     </p>
-                    {service.features && service.features.length > 0 && (
+                    {(service.features || service.feature)?.length > 0 && (
                       <ul className="space-y-2 mb-6">
-                        {service.features.slice(0, 3).map((feature, index) => (
+                        {(service.features || service.feature).slice(0, 3).map((feature, index) => (
                           <li key={index} className="flex items-center text-sm text-gray-600">
                             <svg className="w-4 h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
                               <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                             </svg>
-                            {feature.feature_heading?.str1 || `Feature ${index + 1}`}
+                            {feature.title || `Feature ${index + 1}`}
                           </li>
                         ))}
-                        {service.features.length > 3 && (
+                        {(service.features || service.feature).length > 3 && (
                           <li className="text-sm text-blue-600 font-semibold">
-                            + {service.features.length - 3} more features
+                            + {(service.features || service.feature).length - 3} more features
                           </li>
                         )}
                       </ul>

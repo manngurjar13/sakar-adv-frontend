@@ -1,53 +1,116 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
-import api from '../../config/api'
+import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
+import { createId, ensureArray } from '../../lib/supabaseData'
+import { supabase } from '../../lib/supabase'
+import { deletePublicFile, uploadPublicFile } from '../../lib/supabaseStorage'
 
-export const fetchProducts = createAsyncThunk(
-  'products/fetchProducts',
-  async (_, { rejectWithValue }) => {
-    try {
-      const response = await api.get('/products')
-      return response.data.products
-    } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to fetch products')
-    }
-  }
-)
+const normalizeProduct = (product) => ({
+  ...product,
+  id: product.id,
+  _id: product.id,
+  image: product.image || product.image_url || '',
+  image_url: product.image || product.image_url || '',
+  features: ensureArray(product.features),
+})
 
-export const createProduct = createAsyncThunk(
-  'products/createProduct',
-  async (productData, { rejectWithValue }) => {
-    try {
-      const response = await api.post('/products', productData)
-      return response.data.product
-    } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to create product')
+const buildProductPayload = async ({ id, productData, existingProduct = null }) => {
+  let image = productData.image || existingProduct?.image || null
+
+  if (productData.imageFile) {
+    if (existingProduct?.image) {
+      await deletePublicFile({ bucket: 'products', publicUrl: existingProduct.image })
     }
+
+    image = await uploadPublicFile({
+      bucket: 'products',
+      file: productData.imageFile,
+      recordId: id,
+      folder: 'main',
+    })
   }
-)
+
+  return {
+    id,
+    name: productData.name || '',
+    description: productData.description || '',
+    price: Number(productData.price) || 0,
+    category: productData.category || '',
+    status: productData.status || 'draft',
+    image,
+    features: ensureArray(productData.features).map((feature) => String(feature || '')),
+  }
+}
+
+export const fetchProducts = createAsyncThunk('products/fetchProducts', async (_, { rejectWithValue }) => {
+  try {
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      throw new Error(error.message || 'Failed to fetch products')
+    }
+
+    return (data || []).map(normalizeProduct)
+  } catch (error) {
+    return rejectWithValue(error.message || 'Failed to fetch products')
+  }
+})
+
+export const createProduct = createAsyncThunk('products/createProduct', async (productData, { rejectWithValue }) => {
+  try {
+    const id = createId()
+    const payload = await buildProductPayload({ id, productData })
+    const { data, error } = await supabase.from('products').insert(payload).select().single()
+
+    if (error) {
+      throw new Error(error.message || 'Failed to create product')
+    }
+
+    return normalizeProduct(data)
+  } catch (error) {
+    return rejectWithValue(error.message || 'Failed to create product')
+  }
+})
 
 export const updateProduct = createAsyncThunk(
   'products/updateProduct',
-  async ({ id, productData }, { rejectWithValue }) => {
+  async ({ id, productData }, { rejectWithValue, getState }) => {
     try {
-      const response = await api.put(`/products/${id}`, productData)
-      return response.data.product
+      const existingProduct = getState().products.products.find((product) => product.id === id || product._id === id)
+      const payload = await buildProductPayload({ id, productData, existingProduct })
+      const { data, error } = await supabase.from('products').update(payload).eq('id', id).select().single()
+
+      if (error) {
+        throw new Error(error.message || 'Failed to update product')
+      }
+
+      return normalizeProduct(data)
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to update product')
+      return rejectWithValue(error.message || 'Failed to update product')
     }
   }
 )
 
-export const deleteProduct = createAsyncThunk(
-  'products/deleteProduct',
-  async (id, { rejectWithValue }) => {
-    try {
-      await api.delete(`/products/${id}`)
-      return id
-    } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to delete product')
+export const deleteProduct = createAsyncThunk('products/deleteProduct', async (id, { rejectWithValue, getState }) => {
+  try {
+    const existingProduct = getState().products.products.find((product) => product.id === id || product._id === id)
+
+    if (existingProduct?.image) {
+      await deletePublicFile({ bucket: 'products', publicUrl: existingProduct.image })
     }
+
+    const { error } = await supabase.from('products').delete().eq('id', id)
+
+    if (error) {
+      throw new Error(error.message || 'Failed to delete product')
+    }
+
+    return id
+  } catch (error) {
+    return rejectWithValue(error.message || 'Failed to delete product')
   }
-)
+})
 
 const initialState = {
   products: [],

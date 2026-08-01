@@ -1,96 +1,171 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
-import axios from 'axios'
+import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
+import { createId, ensureArray } from '../../lib/supabaseData'
+import { supabase } from '../../lib/supabase'
+import { deletePublicFile, uploadPublicFile } from '../../lib/supabaseStorage'
 
-export const fetchAdvertising = createAsyncThunk(
-  'advertising/fetchAdvertising',
-  async (_, { rejectWithValue }) => {
-    try {
-      // Mock data for development
-      await new Promise(resolve => setTimeout(resolve, 500)) // Simulate API delay
-      const mockData = [
-        {
-          id: 1,
-          name: 'Outdoor Hoardings Campaign',
-          description: 'High-impact outdoor advertising for maximum visibility',
-          category: 'outdoor-hoardings',
-          price: 15000,
-          status: 'active',
-          image: 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=500',
-          features: ['High visibility', 'Weather resistant', 'Custom design', 'Strategic locations']
-        },
-        {
-          id: 2,
-          name: 'Billboard Advertising',
-          description: 'Premium billboard placements in prime locations',
-          category: 'billboard-advertising',
-          price: 25000,
-          status: 'active',
-          image: 'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?w=500',
-          features: ['Prime locations', 'High footfall', 'Premium quality', '24/7 visibility']
-        },
-        {
-          id: 3,
-          name: 'Festival Banners',
-          description: 'Cultural festival advertising banners and displays',
-          category: 'festival-banners',
-          price: 8000,
-          status: 'active',
-          image: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=500',
-          features: ['Festival theme', 'Colorful design', 'Cultural relevance', 'Event-specific']
-        }
-      ]
-      return mockData
-    } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to fetch advertising')
-    }
+const normalizeAdvertising = (advertising) => {
+  const featureList = ensureArray(advertising.feature || advertising.features).map((feature, index) => ({
+    id: feature.id || feature._id || `${advertising.id}-feature-${index}`,
+    title: feature.title || '',
+    description: feature.description || '',
+    image: feature.image || '',
+  }))
+
+  return {
+    ...advertising,
+    id: advertising.id,
+    _id: advertising.id,
+    image: advertising.image || advertising.image_url || '',
+    image_url: advertising.image || advertising.image_url || '',
+    advertising_name: advertising.advertising_name || { str1: '', str2: '' },
+    feature_heading: advertising.feature_heading || { str1: '', str2: '' },
+    feature_description: advertising.feature_description || '',
+    feature: featureList,
+    features: featureList,
   }
-)
+}
+
+const buildFeaturePayload = async ({ advertisingId, feature = [] }) => {
+  return Promise.all(
+    ensureArray(feature).map(async (item, index) => {
+      let image = item.image || null
+
+      if (item.imageFile) {
+        if (image) {
+          await deletePublicFile({ bucket: 'advertising', publicUrl: image })
+        }
+
+        image = await uploadPublicFile({
+          bucket: 'advertising',
+          file: item.imageFile,
+          recordId: advertisingId,
+          folder: `features/${index + 1}`,
+        })
+      }
+
+      return {
+        id: item.id || createId(),
+        title: item.title || '',
+        description: item.description || '',
+        image,
+      }
+    })
+  )
+}
+
+const buildAdvertisingPayload = async ({ id, advertisingData, existingAdvertising = null }) => {
+  let image = advertisingData.image || existingAdvertising?.image || null
+
+  if (advertisingData.imageFile) {
+    if (existingAdvertising?.image) {
+      await deletePublicFile({ bucket: 'advertising', publicUrl: existingAdvertising.image })
+    }
+
+    image = await uploadPublicFile({
+      bucket: 'advertising',
+      file: advertisingData.imageFile,
+      recordId: id,
+      folder: 'main',
+    })
+  }
+
+  const feature = await buildFeaturePayload({
+    advertisingId: id,
+    feature: advertisingData.feature,
+  })
+
+  return {
+    id,
+    category: advertisingData.category,
+    advertising_name: advertisingData.advertising_name || { str1: '', str2: '' },
+    description: advertisingData.description || '',
+    image,
+    feature_heading: advertisingData.feature_heading || { str1: '', str2: '' },
+    feature_description: advertisingData.feature_description || '',
+    feature,
+  }
+}
+
+export const fetchAdvertising = createAsyncThunk('advertising/fetchAdvertising', async (_, { rejectWithValue }) => {
+  try {
+    const { data, error } = await supabase
+      .from('advertising')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      throw new Error(error.message || 'Failed to fetch advertising')
+    }
+
+    return (data || []).map(normalizeAdvertising)
+  } catch (error) {
+    return rejectWithValue(error.message || 'Failed to fetch advertising')
+  }
+})
 
 export const createAdvertising = createAsyncThunk(
   'advertising/createAdvertising',
   async (advertisingData, { rejectWithValue }) => {
     try {
-      // Mock data creation
-      await new Promise(resolve => setTimeout(resolve, 500))
-      const newAdvertising = {
-        id: Date.now(), // Simple ID generation
-        ...advertisingData,
-        createdAt: new Date().toISOString()
+      const id = createId()
+      const payload = await buildAdvertisingPayload({ id, advertisingData })
+      const { data, error } = await supabase.from('advertising').insert(payload).select().single()
+
+      if (error) {
+        throw new Error(error.message || 'Failed to create advertising')
       }
-      return newAdvertising
+
+      return normalizeAdvertising(data)
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to create advertising')
+      return rejectWithValue(error.message || 'Failed to create advertising')
     }
   }
 )
 
 export const updateAdvertising = createAsyncThunk(
   'advertising/updateAdvertising',
-  async ({ id, advertisingData }, { rejectWithValue }) => {
+  async ({ id, advertisingData }, { rejectWithValue, getState }) => {
     try {
-      // Mock data update
-      await new Promise(resolve => setTimeout(resolve, 500))
-      const updatedAdvertising = {
-        id,
-        ...advertisingData,
-        updatedAt: new Date().toISOString()
+      const existingAdvertising = getState().advertising.advertising.find((item) => item.id === id || item._id === id)
+      const payload = await buildAdvertisingPayload({ id, advertisingData, existingAdvertising })
+      const { data, error } = await supabase.from('advertising').update(payload).eq('id', id).select().single()
+
+      if (error) {
+        throw new Error(error.message || 'Failed to update advertising')
       }
-      return updatedAdvertising
+
+      return normalizeAdvertising(data)
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to update advertising')
+      return rejectWithValue(error.message || 'Failed to update advertising')
     }
   }
 )
 
 export const deleteAdvertising = createAsyncThunk(
   'advertising/deleteAdvertising',
-  async (id, { rejectWithValue }) => {
+  async (id, { rejectWithValue, getState }) => {
     try {
-      // Mock data deletion
-      await new Promise(resolve => setTimeout(resolve, 500))
+      const existingAdvertising = getState().advertising.advertising.find((item) => item.id === id || item._id === id)
+
+      if (existingAdvertising?.image) {
+        await deletePublicFile({ bucket: 'advertising', publicUrl: existingAdvertising.image })
+      }
+
+      for (const feature of ensureArray(existingAdvertising?.feature)) {
+        if (feature.image) {
+          await deletePublicFile({ bucket: 'advertising', publicUrl: feature.image })
+        }
+      }
+
+      const { error } = await supabase.from('advertising').delete().eq('id', id)
+
+      if (error) {
+        throw new Error(error.message || 'Failed to delete advertising')
+      }
+
       return id
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to delete advertising')
+      return rejectWithValue(error.message || 'Failed to delete advertising')
     }
   }
 )

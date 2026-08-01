@@ -1,22 +1,59 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
-import api from '../../config/api'
+import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
+import { createId, getFileFromFormData, getStringFromFormData } from '../../lib/supabaseData'
+import { supabase } from '../../lib/supabase'
+import { deletePublicFile, uploadPublicFile } from '../../lib/supabaseStorage'
+
+const normalizeBanner = (banner) => ({
+  ...banner,
+  id: banner.id,
+  _id: banner.id,
+  bannerText: banner.banner_text || banner.bannerText || banner.cardText || '',
+  cardText: banner.banner_text || banner.bannerText || banner.cardText || '',
+  bannerImage: banner.image || banner.bannerImage || banner.backgroundImage || '',
+  image: banner.image || banner.bannerImage || banner.backgroundImage || '',
+})
+
+const buildBannerPayload = async ({ id, bannerData, existingBanner = null }) => {
+  let image = existingBanner?.bannerImage || existingBanner?.image || null
+  const nextFile = getFileFromFormData(bannerData, 'backgroundImage') || getFileFromFormData(bannerData, 'bannerImage')
+
+  if (nextFile) {
+    if (image) {
+      await deletePublicFile({ bucket: 'event-banners', publicUrl: image })
+    }
+
+    image = await uploadPublicFile({
+      bucket: 'event-banners',
+      file: nextFile,
+      recordId: id,
+      folder: 'background',
+    })
+  }
+
+  return {
+    id,
+    banner_text: getStringFromFormData(bannerData, 'bannerText') || getStringFromFormData(bannerData, 'cardText'),
+    image,
+  }
+}
 
 // Async thunks for event banners
 export const fetchEventBanners = createAsyncThunk(
   'eventBanners/fetchEventBanners',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await api.get('/event-banners')
-      // Map MongoDB _id to id for UI consistency
-      const banners = (response.data.banners || response.data || []).map(banner => ({
-        ...banner,
-        id: banner._id || banner.id,
-        cardText: banner.bannerText || banner.cardText,
-        bannerImage: banner.bannerImage || banner.backgroundImage || banner.image || ''
-      }))
-      return banners
+      const { data, error } = await supabase
+        .from('event_banners')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        throw new Error(error.message || 'Failed to fetch event banners')
+      }
+
+      return (data || []).map(normalizeBanner)
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch event banners')
+      return rejectWithValue(error.message || 'Failed to fetch event banners')
     }
   }
 )
@@ -25,54 +62,63 @@ export const createEventBanner = createAsyncThunk(
   'eventBanners/createEventBanner',
   async (bannerData, { rejectWithValue }) => {
     try {
-      const response = await api.post('/event-banners', bannerData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      })
-      const banner = response.data.banner || response.data
-      return {
-        ...banner,
-        id: banner._id || banner.id,
-        cardText: banner.bannerText || banner.cardText,
-        bannerImage: banner.bannerImage || banner.backgroundImage || banner.image || ''
+      const id = createId()
+      const payload = await buildBannerPayload({ id, bannerData })
+      const { data, error } = await supabase.from('event_banners').insert(payload).select().single()
+
+      if (error) {
+        throw new Error(error.message || 'Failed to create event banner')
       }
+
+      return normalizeBanner(data)
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to create event banner')
+      return rejectWithValue(error.message || 'Failed to create event banner')
     }
   }
 )
 
 export const updateEventBanner = createAsyncThunk(
   'eventBanners/updateEventBanner',
-  async ({ id, bannerData }, { rejectWithValue }) => {
+  async ({ id, bannerData }, { rejectWithValue, getState }) => {
     try {
-      const response = await api.put(`/event-banners/${id}`, bannerData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      })
-      const banner = response.data.banner || response.data
-      return {
-        ...banner,
-        id: banner._id || banner.id,
-        cardText: banner.bannerText || banner.cardText,
-        bannerImage: banner.bannerImage || banner.backgroundImage || banner.image || ''
+      const existingBanner = getState().eventBanners.banners.find((banner) => banner.id === id)
+      const payload = await buildBannerPayload({ id, bannerData, existingBanner })
+      const { data, error } = await supabase
+        .from('event_banners')
+        .update(payload)
+        .eq('id', id)
+        .select()
+        .single()
+
+      if (error) {
+        throw new Error(error.message || 'Failed to update event banner')
       }
+
+      return normalizeBanner(data)
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to update event banner')
+      return rejectWithValue(error.message || 'Failed to update event banner')
     }
   }
 )
 
 export const deleteEventBanner = createAsyncThunk(
   'eventBanners/deleteEventBanner',
-  async (bannerId, { rejectWithValue }) => {
+  async (bannerId, { rejectWithValue, getState }) => {
     try {
-      await api.delete(`/event-banners/${bannerId}`)
+      const existingBanner = getState().eventBanners.banners.find((banner) => banner.id === bannerId)
+      if (existingBanner?.bannerImage) {
+        await deletePublicFile({ bucket: 'event-banners', publicUrl: existingBanner.bannerImage })
+      }
+
+      const { error } = await supabase.from('event_banners').delete().eq('id', bannerId)
+
+      if (error) {
+        throw new Error(error.message || 'Failed to delete event banner')
+      }
+
       return bannerId
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to delete event banner')
+      return rejectWithValue(error.message || 'Failed to delete event banner')
     }
   }
 )
@@ -101,11 +147,7 @@ const eventBannerSlice = createSlice({
       })
       .addCase(fetchEventBanners.fulfilled, (state, action) => {
         state.loading = false
-        // Normalize API response to match UI expectations
-        state.banners = action.payload.map(banner => ({
-          ...banner,
-          cardText: banner.bannerText || banner.cardText
-        }))
+        state.banners = action.payload
       })
       .addCase(fetchEventBanners.rejected, (state, action) => {
         state.loading = false
@@ -120,11 +162,7 @@ const eventBannerSlice = createSlice({
       })
       .addCase(createEventBanner.fulfilled, (state, action) => {
         state.creating = false
-        const newBanner = {
-          ...action.payload,
-          cardText: action.payload.bannerText || action.payload.cardText
-        }
-        state.banners.unshift(newBanner)
+        state.banners.unshift(action.payload)
       })
       .addCase(createEventBanner.rejected, (state, action) => {
         state.creating = false
@@ -139,13 +177,9 @@ const eventBannerSlice = createSlice({
       })
       .addCase(updateEventBanner.fulfilled, (state, action) => {
         state.updating = false
-        const updatedBanner = {
-          ...action.payload,
-          cardText: action.payload.bannerText || action.payload.cardText
-        }
         const index = state.banners.findIndex(banner => banner.id === action.payload.id)
         if (index !== -1) {
-          state.banners[index] = updatedBanner
+          state.banners[index] = action.payload
         }
       })
       .addCase(updateEventBanner.rejected, (state, action) => {

@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
+import { fetchProducts } from "../store/slices/productsSlice";
 import { fetchServices } from "../store/slices/servicesSlice";
+import { fetchAdvertising } from "../store/slices/advertisingSlice";
 import logo from "../../public/logo.png";
 
 const Header = () => {
@@ -12,13 +14,27 @@ const Header = () => {
   const [mobileDropdownsOpen, setMobileDropdownsOpen] = useState({});
   const location = useLocation();
   const dispatch = useDispatch();
+  const { products } = useSelector((state) => state.products);
   const { services } = useSelector((state) => state.services);
+  const { advertising } = useSelector((state) => state.advertising);
+
+  useEffect(() => {
+    if (products.length === 0) {
+      dispatch(fetchProducts());
+    }
+  }, [dispatch, products.length]);
 
   useEffect(() => {
     if (services.length === 0) {
       dispatch(fetchServices());
     }
   }, [dispatch, services.length]);
+
+  useEffect(() => {
+    if (advertising.length === 0) {
+      dispatch(fetchAdvertising());
+    }
+  }, [dispatch, advertising.length]);
 
   const navigation = [
     { name: "Home", path: "/" },
@@ -32,32 +48,27 @@ const Header = () => {
 
   // Create dynamic services dropdown from API
   const servicesDropdown = services.map((service) => ({
-    name: service.service_name?.str1 || "Service",
+    name: [service.service_name?.str1, service.service_name?.str2]
+      .filter(Boolean)
+      .join(" ") || "Service",
     path: `/services/${(service.service_name?.str1 || "service").toLowerCase().replace(/\s+/g, "-")}`,
   }));
 
-  const productsDropdown = [
-    {
-      name: "All Types Printing work",
-      path: "/products/All-types-printing-work",
-    },
-    {
-      name: "Advertisement Prosomal Items",
-      path: "/products/advertisement-prosomal-items",
-    },
-    { name: "Canopy Printing", path: "/products/promo-tables" },
-    { name: "Steady’s", path: "/products/Steady" },
-    { name: "Flange Board", path: "/products/flange-board" },
-    { name: "Sine Board’s", path: "/products/sine-board" },
-  ];
+  const advertisingDropdown = advertising.map((item) => ({
+    name: [item.advertising_name?.str1, item.advertising_name?.str2]
+      .filter(Boolean)
+      .join(" ") || "Advertising",
+    path: `/advertising/${(item.advertising_name?.str1 || "advertising")
+      .toLowerCase()
+      .replace(/\s+/g, "-")}`,
+  }));
 
-  const advertisingDropdown = [
-    { name: "Outdoor Hoardings", path: "/advertising/outdoor-hoardings" },
-    { name: "Billboard Advertising", path: "/advertising/billboard" },
-    { name: "Festival Banners", path: "/advertising/festival-banners" },
-    { name: "Field Activation", path: "/advertising/field-activation" },
-    { name: "BTL Campaigns", path: "/advertising/btl-campaigns" },
-  ];
+  const productsDropdown = products
+    .filter((product) => product.status !== "inactive" && product.status !== "draft")
+    .map((product) => ({
+    name: product.name || "Product",
+    path: `/products/${(product.name || "product").toLowerCase().replace(/\s+/g, "-")}`,
+  }));
 
   const isActive = (path) => location.pathname === path;
 

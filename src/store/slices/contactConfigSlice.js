@@ -1,138 +1,220 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
-import api from '../../config/api'
+import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
+import { cloneJson, createId, ensureArray } from '../../lib/supabaseData'
+import { supabase } from '../../lib/supabase'
 
-// Async thunks for contact configuration
-export const fetchContactConfig = createAsyncThunk(
-  'contactConfig/fetchContactConfig',
-  async (_, { rejectWithValue }) => {
-    try {
-      const response = await api.get('/contact-config')
-      return response.data.config
-    } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch contact config')
-    }
+const DEFAULT_ADDRESS = {
+  street: '',
+  area: '',
+  city: '',
+  state: '',
+  pincode: '',
+}
+
+const normalizeItemIds = (items, defaults = {}) => {
+  return ensureArray(items).map((item) => ({
+    ...defaults,
+    ...item,
+    id: item.id || createId(),
+  }))
+}
+
+const normalizeContactConfig = (config) => {
+  if (!config) return null
+
+  return {
+    id: config.id,
+    singleton: config.singleton ?? true,
+    address: {
+      ...DEFAULT_ADDRESS,
+      ...(config.address || {}),
+    },
+    emails: normalizeItemIds(config.emails, { type: 'Primary', email: '', isActive: true }),
+    phoneNumbers: normalizeItemIds(config.phone_numbers || config.phoneNumbers, {
+      type: 'Primary',
+      number: '',
+      isActive: true,
+      isDirectCall: false,
+    }),
+    whatsappNumbers: normalizeItemIds(config.whatsapp_numbers || config.whatsappNumbers, {
+      type: 'Business',
+      number: '',
+      isActive: true,
+    }),
+    socialMedia: normalizeItemIds(config.social_media || config.socialMedia, {
+      platform: '',
+      url: '',
+      isActive: false,
+    }),
   }
-)
+}
+
+const serializeContactConfig = (config) => {
+  const normalized = normalizeContactConfig(config)
+
+  return {
+    id: normalized.id,
+    singleton: true,
+    address: normalized.address,
+    emails: normalized.emails,
+    phone_numbers: normalized.phoneNumbers,
+    whatsapp_numbers: normalized.whatsappNumbers,
+    social_media: normalized.socialMedia,
+  }
+}
+
+const saveContactConfig = async (config) => {
+  const payload = serializeContactConfig(config)
+  const { data, error } = await supabase
+    .from('contact_config')
+    .upsert(payload)
+    .select()
+    .single()
+
+  if (error) {
+    throw new Error(error.message || 'Failed to update contact config')
+  }
+
+  return normalizeContactConfig(data)
+}
+
+export const fetchContactConfig = createAsyncThunk('contactConfig/fetchContactConfig', async (_, { rejectWithValue }) => {
+  try {
+    const { data, error } = await supabase
+      .from('contact_config')
+      .select('*')
+      .eq('singleton', true)
+      .single()
+
+    if (error) {
+      throw new Error(error.message || 'Failed to fetch contact config')
+    }
+
+    return normalizeContactConfig(data)
+  } catch (error) {
+    return rejectWithValue(error.message || 'Failed to fetch contact config')
+  }
+})
 
 export const updateContactConfig = createAsyncThunk(
   'contactConfig/updateContactConfig',
   async (configData, { rejectWithValue }) => {
     try {
-      const response = await api.put('/contact-config', configData)
-      return response.data.config
+      return await saveContactConfig(configData)
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to update contact config')
+      return rejectWithValue(error.message || 'Failed to update contact config')
     }
   }
 )
 
-// Email management (real endpoints)
-export const addEmail = createAsyncThunk(
-  'contactConfig/addEmail',
-  async (emailData, { rejectWithValue }) => {
-    try {
-      const response = await api.post('/contact-config/emails', emailData)
-      return response.data.email
-    } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to add email')
-    }
+export const addEmail = createAsyncThunk('contactConfig/addEmail', async (emailData, { rejectWithValue, getState }) => {
+  try {
+    const config = cloneJson(getState().contactConfig.config)
+    config.emails = [...ensureArray(config.emails), { id: createId(), isActive: true, ...emailData }]
+    return await saveContactConfig(config)
+  } catch (error) {
+    return rejectWithValue(error.message || 'Failed to add email')
   }
-)
+})
 
 export const updateEmail = createAsyncThunk(
   'contactConfig/updateEmail',
-  async ({ id, emailData }, { rejectWithValue }) => {
+  async ({ id, emailData }, { rejectWithValue, getState }) => {
     try {
-      const response = await api.put(`/contact-config/emails/${id}`, emailData)
-      return { id, emailData: response.data.email }
+      const config = cloneJson(getState().contactConfig.config)
+      config.emails = ensureArray(config.emails).map((email) => (email.id === id ? { ...email, ...emailData } : email))
+      return await saveContactConfig(config)
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to update email')
+      return rejectWithValue(error.message || 'Failed to update email')
     }
   }
 )
 
-export const deleteEmail = createAsyncThunk(
-  'contactConfig/deleteEmail',
-  async (emailId, { rejectWithValue }) => {
-    try {
-      await api.delete(`/contact-config/emails/${emailId}`)
-      return emailId
-    } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to delete email')
-    }
+export const deleteEmail = createAsyncThunk('contactConfig/deleteEmail', async (emailId, { rejectWithValue, getState }) => {
+  try {
+    const config = cloneJson(getState().contactConfig.config)
+    config.emails = ensureArray(config.emails).filter((email) => email.id !== emailId)
+    return await saveContactConfig(config)
+  } catch (error) {
+    return rejectWithValue(error.message || 'Failed to delete email')
   }
-)
+})
 
-// Phone number management
 export const addPhoneNumber = createAsyncThunk(
   'contactConfig/addPhoneNumber',
-  async (phoneData, { rejectWithValue }) => {
+  async (phoneData, { rejectWithValue, getState }) => {
     try {
-      const response = await api.post('/contact-config/phones', phoneData)
-      return response.data.phone
+      const config = cloneJson(getState().contactConfig.config)
+      config.phoneNumbers = [...ensureArray(config.phoneNumbers), { id: createId(), isActive: true, ...phoneData }]
+      return await saveContactConfig(config)
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to add phone number')
+      return rejectWithValue(error.message || 'Failed to add phone number')
     }
   }
 )
 
 export const updatePhoneNumber = createAsyncThunk(
   'contactConfig/updatePhoneNumber',
-  async ({ id, phoneData }, { rejectWithValue }) => {
+  async ({ id, phoneData }, { rejectWithValue, getState }) => {
     try {
-      const response = await api.put(`/contact-config/phones/${id}`, phoneData)
-      return { id, phoneData: response.data.phone }
+      const config = cloneJson(getState().contactConfig.config)
+      config.phoneNumbers = ensureArray(config.phoneNumbers).map((phone) => (phone.id === id ? { ...phone, ...phoneData } : phone))
+      return await saveContactConfig(config)
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to update phone number')
+      return rejectWithValue(error.message || 'Failed to update phone number')
     }
   }
 )
 
 export const deletePhoneNumber = createAsyncThunk(
   'contactConfig/deletePhoneNumber',
-  async (phoneId, { rejectWithValue }) => {
+  async (phoneId, { rejectWithValue, getState }) => {
     try {
-      await api.delete(`/contact-config/phones/${phoneId}`)
-      return phoneId
+      const config = cloneJson(getState().contactConfig.config)
+      config.phoneNumbers = ensureArray(config.phoneNumbers).filter((phone) => phone.id !== phoneId)
+      return await saveContactConfig(config)
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to delete phone number')
+      return rejectWithValue(error.message || 'Failed to delete phone number')
     }
   }
 )
 
-// WhatsApp number management
 export const addWhatsAppNumber = createAsyncThunk(
   'contactConfig/addWhatsAppNumber',
-  async (whatsappData, { rejectWithValue }) => {
+  async (whatsappData, { rejectWithValue, getState }) => {
     try {
-      const response = await api.post('/contact-config/whatsapps', whatsappData)
-      return response.data.whatsapp
+      const config = cloneJson(getState().contactConfig.config)
+      config.whatsappNumbers = [...ensureArray(config.whatsappNumbers), { id: createId(), isActive: true, ...whatsappData }]
+      return await saveContactConfig(config)
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to add WhatsApp number')
+      return rejectWithValue(error.message || 'Failed to add WhatsApp number')
     }
   }
 )
 
 export const updateWhatsAppNumber = createAsyncThunk(
   'contactConfig/updateWhatsAppNumber',
-  async ({ id, whatsappData }, { rejectWithValue }) => {
+  async ({ id, whatsappData }, { rejectWithValue, getState }) => {
     try {
-      const response = await api.put(`/contact-config/whatsapps/${id}`, whatsappData)
-      return { id, whatsappData: response.data.whatsapp }
+      const config = cloneJson(getState().contactConfig.config)
+      config.whatsappNumbers = ensureArray(config.whatsappNumbers).map((whatsapp) =>
+        whatsapp.id === id ? { ...whatsapp, ...whatsappData } : whatsapp
+      )
+      return await saveContactConfig(config)
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to update WhatsApp number')
+      return rejectWithValue(error.message || 'Failed to update WhatsApp number')
     }
   }
 )
 
 export const deleteWhatsAppNumber = createAsyncThunk(
   'contactConfig/deleteWhatsAppNumber',
-  async (whatsappId, { rejectWithValue }) => {
+  async (whatsappId, { rejectWithValue, getState }) => {
     try {
-      await api.delete(`/contact-config/whatsapps/${whatsappId}`)
-      return whatsappId
+      const config = cloneJson(getState().contactConfig.config)
+      config.whatsappNumbers = ensureArray(config.whatsappNumbers).filter((whatsapp) => whatsapp.id !== whatsappId)
+      return await saveContactConfig(config)
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to delete WhatsApp number')
+      return rejectWithValue(error.message || 'Failed to delete WhatsApp number')
     }
   }
 )
@@ -198,49 +280,37 @@ const contactConfigSlice = createSlice({
     // Email management
     builder
       .addCase(addEmail.fulfilled, (state, action) => {
-        state.config.emails.push(action.payload)
+        state.config = action.payload
       })
       .addCase(updateEmail.fulfilled, (state, action) => {
-        const { id, emailData } = action.payload
-        const emailIndex = state.config.emails.findIndex(email => email.id === id)
-        if (emailIndex !== -1) {
-          state.config.emails[emailIndex] = { ...state.config.emails[emailIndex], ...emailData }
-        }
+        state.config = action.payload
       })
       .addCase(deleteEmail.fulfilled, (state, action) => {
-        state.config.emails = state.config.emails.filter(email => email.id !== action.payload)
+        state.config = action.payload
       })
 
     // Phone number management
     builder
       .addCase(addPhoneNumber.fulfilled, (state, action) => {
-        state.config.phoneNumbers.push(action.payload)
+        state.config = action.payload
       })
       .addCase(updatePhoneNumber.fulfilled, (state, action) => {
-        const { id, phoneData } = action.payload
-        const phoneIndex = state.config.phoneNumbers.findIndex(phone => phone.id === id)
-        if (phoneIndex !== -1) {
-          state.config.phoneNumbers[phoneIndex] = { ...state.config.phoneNumbers[phoneIndex], ...phoneData }
-        }
+        state.config = action.payload
       })
       .addCase(deletePhoneNumber.fulfilled, (state, action) => {
-        state.config.phoneNumbers = state.config.phoneNumbers.filter(phone => phone.id !== action.payload)
+        state.config = action.payload
       })
 
     // WhatsApp number management
     builder
       .addCase(addWhatsAppNumber.fulfilled, (state, action) => {
-        state.config.whatsappNumbers.push(action.payload)
+        state.config = action.payload
       })
       .addCase(updateWhatsAppNumber.fulfilled, (state, action) => {
-        const { id, whatsappData } = action.payload
-        const whatsappIndex = state.config.whatsappNumbers.findIndex(whatsapp => whatsapp.id === id)
-        if (whatsappIndex !== -1) {
-          state.config.whatsappNumbers[whatsappIndex] = { ...state.config.whatsappNumbers[whatsappIndex], ...whatsappData }
-        }
+        state.config = action.payload
       })
       .addCase(deleteWhatsAppNumber.fulfilled, (state, action) => {
-        state.config.whatsappNumbers = state.config.whatsappNumbers.filter(whatsapp => whatsapp.id !== action.payload)
+        state.config = action.payload
       })
   }
 })

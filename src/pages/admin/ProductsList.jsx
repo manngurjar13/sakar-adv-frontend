@@ -1,19 +1,17 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Link } from 'react-router-dom'
+import toast from 'react-hot-toast'
 import {
   PlusIcon,
   PencilIcon,
   TrashIcon,
-  EyeIcon,
-  MagnifyingGlassIcon,
 } from '@heroicons/react/24/outline'
 import { fetchProducts, deleteProduct } from '../../store/slices/productsSlice'
 
 const ProductsList = () => {
   const dispatch = useDispatch()
   const { products, loading } = useSelector((state) => state.products)
-  const [searchTerm, setSearchTerm] = useState('')
   const [deleteConfirm, setDeleteConfirm] = useState(null)
 
   useEffect(() => {
@@ -23,128 +21,138 @@ const ProductsList = () => {
   const handleDelete = async (id) => {
     try {
       await dispatch(deleteProduct(id)).unwrap()
+      toast.success('Product deleted successfully!')
       setDeleteConfirm(null)
     } catch (error) {
-      console.error('Delete failed:', error)
+      toast.error('Failed to delete product. Please try again.')
     }
   }
 
-  const filteredProducts = products.filter((product) =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.description.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const filteredProducts = products
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-6">
+      <div className="md:flex md:items-center md:justify-between">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">
-            Products Management
+          <h2 className="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate">
+            Manage Products
           </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Manage your product catalog and offerings
+          <p className="mt-1 text-sm text-gray-500">
+            View, edit, and manage all products
           </p>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="inline-flex items-center px-3 sm:px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 w-full sm:w-auto justify-center"
-        >
-          <PlusIcon className="h-4 w-4 mr-2" />
-          Add Product
-        </button>
-      </div>
-
-      {/* Search */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
-        <div className="relative">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
-          </div>
-          <input
-            type="text"
-            placeholder="Search products..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-          />
+        <div className="mt-4 md:mt-0">
+          <Link
+            to="/admin/products/create"
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700"
+          >
+            <PlusIcon className="h-5 w-5 mr-2" />
+            Create New Product
+          </Link>
         </div>
       </div>
 
-      {/* Products Table */}
-      <div className="bg-white shadow overflow-hidden sm:rounded-md">
-        <div className="px-4 py-5 sm:px-6">
-          <h3 className="text-lg leading-6 font-medium text-gray-900">
-            Products ({filteredProducts.length})
-          </h3>
-        </div>
-        <ul className="divide-y divide-gray-200">
+      <div className="bg-white shadow rounded-lg overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Product Name
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Category
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Description
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Image
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Price
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
           {filteredProducts.length === 0 ? (
-            <li className="px-4 py-8 text-center text-gray-500">
-              No products found. Create your first product to get started.
-            </li>
+                <tr>
+                  <td colSpan="6" className="px-6 py-12 text-center text-gray-500">
+                    No products found. Create your first product to get started.
+                  </td>
+                </tr>
           ) : (
             filteredProducts.map((product) => (
-              <li key={product.id}>
-                <div className="px-4 py-4 flex items-center justify-between hover:bg-gray-50">
-                  <div className="flex items-center">
-                    <div className="flex-shrink-0 h-10 w-10">
-                      <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
-                        <span className="text-sm font-medium text-green-600">
-                          {product.name.charAt(0).toUpperCase()}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="ml-4">
-                      <div className="text-sm font-medium text-gray-900">
+                <tr key={product.id} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex flex-col">
+                      <span className="text-sm font-medium text-gray-900">
                         {product.name}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        {product.description}
-                      </div>
+                      </span>
+                      <span className="text-xs text-gray-400">
+                        {product._id}
+                      </span>
                     </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm text-gray-500">
-                      ₹{product.price}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="inline-flex px-3 py-1 text-xs font-semibold leading-5 rounded-full bg-green-100 text-green-800 capitalize">
+                      {product.category}
                     </span>
-                    <div className="flex space-x-1">
+                  </td>
+                  <td className="px-6 py-4">
+                    <p className="text-sm text-gray-600 line-clamp-2 max-w-xs">
+                      {product.description}
+                    </p>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {product.image ? (
+                      <img
+                        src={product.image}
+                        alt={product.name}
+                        className="h-10 w-10 rounded object-cover"
+                      />
+                    ) : (
+                      <span className="text-sm text-gray-500">No image</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="text-sm text-gray-700">
+                      Rs {Number(product.price || 0).toLocaleString()}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2 flex">
                       <Link
-                        to={`/admin/products/${product.id}`}
-                        className="text-blue-600 hover:text-blue-900 p-1 rounded"
-                        title="View"
-                      >
-                        <EyeIcon className="h-4 w-4" />
-                      </Link>
-                      <Link
-                        to={`/admin/products/${product.id}/edit`}
-                        className="text-gray-600 hover:text-gray-900 p-1 rounded"
+                        to={`/admin/products/${product._id}`}
+                        className="text-green-600 hover:text-green-900 p-2 hover:bg-green-50 rounded transition-colors"
                         title="Edit"
                       >
-                        <PencilIcon className="h-4 w-4" />
+                        <PencilIcon className="h-5 w-5" />
                       </Link>
                       <button
-                        onClick={() => setDeleteConfirm(product.id)}
-                        className="text-red-600 hover:text-red-900 p-1 rounded"
+                        onClick={() => setDeleteConfirm(product._id)}
+                        className="text-red-600 hover:text-red-900 p-2 hover:bg-red-50 rounded transition-colors"
                         title="Delete"
                       >
-                        <TrashIcon className="h-4 w-4" />
+                        <TrashIcon className="h-5 w-5" />
                       </button>
-                    </div>
-                  </div>
-                </div>
-              </li>
+                  </td>
+                </tr>
             ))
           )}
-        </ul>
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Delete Confirmation Modal */}

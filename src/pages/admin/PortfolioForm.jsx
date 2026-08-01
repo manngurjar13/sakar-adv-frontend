@@ -1,10 +1,12 @@
-import React, { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate, useParams, Link } from 'react-router-dom'
 import { Formik, Form, Field } from 'formik'
 import * as Yup from 'yup'
 import { createPortfolioItem, updatePortfolioItem, fetchPortfolio } from '../../store/slices/portfolioSlice'
 import { ArrowLeftIcon, PhotoIcon } from '@heroicons/react/24/outline'
+import toast from 'react-hot-toast'
+import { getImageUrl } from '../../utils/imageUtils'
 
 const PortfolioForm = () => {
   const dispatch = useDispatch()
@@ -13,7 +15,8 @@ const PortfolioForm = () => {
   const isEdit = Boolean(id)
   
   const { portfolio, loading } = useSelector((state) => state.portfolio)
-  const portfolioItem = portfolio.find(p => p.id === parseInt(id))
+  const portfolioItem = portfolio.find((item) => item.id === id || item._id === id)
+  const [uploadingImage, setUploadingImage] = useState(false)
 
   useEffect(() => {
     if (isEdit && !portfolioItem) {
@@ -25,66 +28,84 @@ const PortfolioForm = () => {
     title: Yup.string().required('Title is required'),
     description: Yup.string().required('Description is required'),
     category: Yup.string().required('Category is required'),
-    image: Yup.mixed().required('Image is required'),
+    image: Yup.mixed().required('Project image is required'),
     status: Yup.string().oneOf(['draft', 'published', 'archived']).required('Status is required'),
   })
 
   const initialValues = {
     title: portfolioItem?.title || '',
     description: portfolioItem?.description || '',
-    category: portfolioItem?.category || '',
-    image: portfolioItem?.image || null,
-    status: portfolioItem?.status || 'draft',
+    category: portfolioItem?.category || 'general',
+    image: portfolioItem?.image || '',
+    imageFile: null,
+    client: portfolioItem?.client || '',
+    year: portfolioItem?.year || '',
+    status: portfolioItem?.status || 'published',
   }
 
   const handleSubmit = async (values, { setSubmitting, setFieldError }) => {
     try {
-      // Create FormData for file upload
       const formData = new FormData()
       formData.append('title', values.title)
       formData.append('description', values.description)
       formData.append('category', values.category)
       formData.append('status', values.status)
-      
-      if (values.image) {
-        formData.append('image', values.image)
+      formData.append('client', values.client || '')
+      formData.append('year', values.year || '')
+
+      if (values.imageFile) {
+        formData.append('image', values.imageFile)
       }
 
-      // Send to backend API
-      const url = isEdit ? `/api/portfolio/${id}` : '/api/portfolio'
-      const method = isEdit ? 'PUT' : 'POST'
-      
-      const response = await fetch(url, {
-        method: method,
-        body: formData,
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to save portfolio item')
-      }
-
-      const savedItem = await response.json()
-      
-      // Update Redux store
       if (isEdit) {
-        await dispatch(updatePortfolioItem({ id: parseInt(id), portfolioData: savedItem })).unwrap()
+        await dispatch(updatePortfolioItem({ id, portfolioData: formData })).unwrap()
+        toast.success('Portfolio item updated successfully!')
       } else {
-        await dispatch(createPortfolioItem(savedItem)).unwrap()
+        await dispatch(createPortfolioItem(formData)).unwrap()
+        toast.success('Portfolio item created successfully!')
       }
       
       navigate('/admin/portfolio')
     } catch (error) {
-      console.error('Form submission failed:', error)
-      setFieldError('general', 'An error occurred while saving the portfolio item')
+      const errorMessage = error?.message || error || 'An error occurred while saving the portfolio item'
+      toast.error(errorMessage)
+      setFieldError('general', errorMessage)
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  const handleImageUpload = async (event, setFieldValue) => {
+    const file = event.currentTarget.files?.[0]
+    if (!file) return
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image size must be less than 5MB')
+      return
+    }
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Only image files are allowed')
+      return
+    }
+
+    try {
+      setUploadingImage(true)
+      const previewUrl = URL.createObjectURL(file)
+      setFieldValue('image', previewUrl)
+      setFieldValue('imageFile', file)
+      toast.success('Project image selected')
+    } catch (error) {
+      toast.error('Failed to select image')
+    } finally {
+      setUploadingImage(false)
     }
   }
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
       </div>
     )
   }
@@ -116,7 +137,7 @@ const PortfolioForm = () => {
           onSubmit={handleSubmit}
           enableReinitialize
         >
-          {({ values, errors, touched, isSubmitting }) => (
+          {({ values, errors, touched, isSubmitting, setFieldValue }) => (
             <Form className="p-6 space-y-6">
               {errors.general && (
                 <div className="bg-red-50 border border-red-200 rounded-md p-4">
@@ -124,7 +145,6 @@ const PortfolioForm = () => {
                 </div>
               )}
 
-              {/* Basic Information */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label htmlFor="title" className="block text-sm font-medium text-gray-700">
@@ -134,8 +154,8 @@ const PortfolioForm = () => {
                     id="title"
                     name="title"
                     type="text"
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    placeholder="e.g., Corporate Event Setup"
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm p-2"
+                    placeholder="e.g., Vehicle Branding Project"
                   />
                   {errors.title && touched.title && (
                     <p className="mt-1 text-sm text-red-600">{errors.title}</p>
@@ -150,17 +170,15 @@ const PortfolioForm = () => {
                     as="select"
                     id="category"
                     name="category"
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm p-2"
                   >
                     <option value="">Select Category</option>
-                    <option value="corporate-events">Corporate Events</option>
-                    <option value="social-events">Social Events</option>
-                    <option value="wedding-decor">Wedding Decor</option>
-                    <option value="birthday-decor">Birthday Decor</option>
-                    <option value="office-decor">Office Decor</option>
-                    <option value="vehicle-branding">Vehicle Branding</option>
+                    <option value="branding">Branding</option>
                     <option value="advertising">Advertising</option>
-                    <option value="other">Other</option>
+                    <option value="events">Events</option>
+                    <option value="printing">Printing</option>
+                    <option value="design">Design</option>
+                    <option value="general">General</option>
                   </Field>
                   {errors.category && touched.category && (
                     <p className="mt-1 text-sm text-red-600">{errors.category}</p>
@@ -177,68 +195,45 @@ const PortfolioForm = () => {
                   id="description"
                   name="description"
                   rows={4}
-                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  placeholder="Describe the project details, challenges, and results..."
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm p-2"
+                  placeholder="Describe the project, the work delivered, and the final result..."
                 />
                 {errors.description && touched.description && (
                   <p className="mt-1 text-sm text-red-600">{errors.description}</p>
                 )}
               </div>
 
-              {/* Image Upload */}
               <div>
                 <label htmlFor="image" className="block text-sm font-medium text-gray-700">
                   Project Image *
                 </label>
-                <Field name="image">
-                  {({ field, form }) => (
-                    <div>
-                      <input
-                        id="image"
-                        type="file"
-                        accept="image/*"
-                        onChange={(event) => {
-                          const file = event.currentTarget.files[0];
-                          form.setFieldValue('image', file);
-                        }}
-                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                      />
-                      {field.value && typeof field.value === 'object' && field.value.name ? (
-                        <div className="mt-2">
-                          <p className="text-sm text-gray-600">
-                            Selected: {field.value.name}
-                          </p>
-                          <div className="mt-1">
-                            <img
-                              src={URL.createObjectURL(field.value)}
-                              alt="Preview"
-                              className="w-32 h-20 object-cover rounded border"
-                            />
-                          </div>
-                        </div>
-                      ) : field.value && typeof field.value === 'string' ? (
-                        <div className="mt-2">
-                          <p className="text-sm text-gray-600">
-                            Current image:
-                          </p>
-                          <div className="mt-1">
-                            <img
-                              src={field.value}
-                              alt="Current"
-                              className="w-32 h-20 object-cover rounded border"
-                            />
-                          </div>
-                        </div>
-                      ) : null}
-                      {form.errors.image && form.touched.image && (
-                        <p className="mt-1 text-sm text-red-600">{form.errors.image}</p>
-                      )}
-                    </div>
-                  )}
-                </Field>
+                <div className="mt-1 flex items-center space-x-4">
+                  <Field
+                    id="image"
+                    name="image"
+                    type="url"
+                    className="flex-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm p-2"
+                    placeholder="https://example.com/project-image.jpg"
+                  />
+                  <input
+                    id="portfolio-image-upload"
+                    type="file"
+                    accept="image/*"
+                    onChange={(event) => handleImageUpload(event, setFieldValue)}
+                    className="hidden"
+                  />
+                  <label
+                    htmlFor="portfolio-image-upload"
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 cursor-pointer"
+                  >
+                    {uploadingImage ? 'Uploading...' : 'Upload'}
+                  </label>
+                </div>
+                {errors.image && touched.image && (
+                  <p className="mt-1 text-sm text-red-600">{errors.image}</p>
+                )}
               </div>
 
-              {/* Image Preview */}
               {values.image && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -246,7 +241,7 @@ const PortfolioForm = () => {
                   </label>
                   <div className="border border-gray-300 rounded-md p-4">
                     <img
-                      src={values.image}
+                      src={getImageUrl(values.image)}
                       alt="Preview"
                       className="max-w-full h-48 object-cover rounded-md"
                       onError={(e) => {
@@ -264,7 +259,34 @@ const PortfolioForm = () => {
                 </div>
               )}
 
-              {/* Status */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                  <label htmlFor="client" className="block text-sm font-medium text-gray-700">
+                    Client
+                  </label>
+                  <Field
+                    id="client"
+                    name="client"
+                    type="text"
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm p-2"
+                    placeholder="e.g., Client Name"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="year" className="block text-sm font-medium text-gray-700">
+                    Year
+                  </label>
+                  <Field
+                    id="year"
+                    name="year"
+                    type="text"
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm p-2"
+                    placeholder="e.g., 2026"
+                  />
+                </div>
+
+                <div>
               <div>
                 <label htmlFor="status" className="block text-sm font-medium text-gray-700">
                   Status *
@@ -273,7 +295,7 @@ const PortfolioForm = () => {
                   as="select"
                   id="status"
                   name="status"
-                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm p-2"
                 >
                   <option value="draft">Draft</option>
                   <option value="published">Published</option>
@@ -283,19 +305,20 @@ const PortfolioForm = () => {
                   <p className="mt-1 text-sm text-red-600">{errors.status}</p>
                 )}
               </div>
+                </div>
+              </div>
 
-              {/* Submit Buttons */}
               <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
                 <Link
                   to="/admin/portfolio"
-                  className="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  className="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                 >
                   Cancel
                 </Link>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                  className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
                 >
                   {isSubmitting ? 'Saving...' : isEdit ? 'Update Portfolio Item' : 'Create Portfolio Item'}
                 </button>

@@ -1,121 +1,165 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
-import api from '../../config/api'
+import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
+import { createId, ensureArray } from '../../lib/supabaseData'
+import { supabase } from '../../lib/supabase'
+import { deletePublicFile, uploadPublicFile } from '../../lib/supabaseStorage'
 
-// Async thunks for services CRUD operations
-export const fetchServices = createAsyncThunk(
-  'services/fetchServices',
-  async (_, { rejectWithValue }) => {
-    try {
-      const response = await api.get('/admin/services')
-      return response.data.services
-    } catch (error) {
-      console.error('Fetch services error:', error)
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch services')
-    }
+const normalizeService = (service) => {
+  const featureList = ensureArray(service.feature || service.features).map((feature, index) => ({
+    id: feature.id || feature._id || `${service.id}-feature-${index}`,
+    title: feature.title || '',
+    description: feature.description || '',
+    image: feature.image || '',
+  }))
+
+  return {
+    ...service,
+    id: service.id,
+    _id: service.id,
+    image: service.image || service.image_url || '',
+    image_url: service.image || service.image_url || '',
+    feature: featureList,
+    features: featureList,
   }
-)
+}
 
-export const createService = createAsyncThunk(
-  'services/createService',
-  async (serviceData, { rejectWithValue }) => {
-    try {
-      // Create FormData for multipart upload
-      const formData = new FormData()
-      
-      // Add basic fields
-      formData.append('category', serviceData.category)
-      formData.append('description', serviceData.description)
-      formData.append('feature_description', serviceData.feature_description)
-      
-      // Add objects as JSON strings (backend expects this)
-      formData.append('service_name', JSON.stringify(serviceData.service_name))
-      formData.append('feature_heading', JSON.stringify(serviceData.feature_heading))
-      formData.append('feature', JSON.stringify(serviceData.feature))
-      
-      // Add main image if it's a file
-      if (serviceData.imageFile) {
-        formData.append('image', serviceData.imageFile)
-      }
-      
-      // Add feature images
-      if (serviceData.feature && Array.isArray(serviceData.feature)) {
-        serviceData.feature.forEach((feat, index) => {
-          if (feat.imageFile) {
-            formData.append(`feature-image-${index}`, feat.imageFile)
-          }
+const buildFeaturePayload = async ({ serviceId, feature = [] }) => {
+  return Promise.all(
+    ensureArray(feature).map(async (item, index) => {
+      let image = item.image || null
+
+      if (item.imageFile) {
+        if (image) {
+          await deletePublicFile({ bucket: 'services', publicUrl: image })
+        }
+
+        image = await uploadPublicFile({
+          bucket: 'services',
+          file: item.imageFile,
+          recordId: serviceId,
+          folder: `features/${index + 1}`,
         })
       }
-      
-      const response = await api.post('/admin/services', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      })
-      
-      return response.data.service
-    } catch (error) {
-      console.error('Create service error:', error)
-      return rejectWithValue(error.response?.data?.error || 'Failed to create service')
+
+      return {
+        id: item.id || createId(),
+        title: item.title || '',
+        description: item.description || '',
+        image,
+      }
+    })
+  )
+}
+
+const buildServicePayload = async ({ id, serviceData, existingService = null }) => {
+  let image = serviceData.image || existingService?.image || null
+
+  if (serviceData.imageFile) {
+    if (existingService?.image) {
+      await deletePublicFile({ bucket: 'services', publicUrl: existingService.image })
     }
+
+    image = await uploadPublicFile({
+      bucket: 'services',
+      file: serviceData.imageFile,
+      recordId: id,
+      folder: 'main',
+    })
   }
-)
+
+  const feature = await buildFeaturePayload({
+    serviceId: id,
+    feature: serviceData.feature,
+  })
+
+  return {
+    id,
+    category: serviceData.category,
+    service_name: serviceData.service_name || { str1: '', str2: '' },
+    description: serviceData.description || '',
+    image,
+    feature_heading: serviceData.feature_heading || { str1: '', str2: '' },
+    feature_description: serviceData.feature_description || '',
+    feature,
+  }
+}
+
+export const fetchServices = createAsyncThunk('services/fetchServices', async (_, { rejectWithValue }) => {
+  try {
+    const { data, error } = await supabase
+      .from('services')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      throw new Error(error.message || 'Failed to fetch services')
+    }
+
+    return (data || []).map(normalizeService)
+  } catch (error) {
+    return rejectWithValue(error.message || 'Failed to fetch services')
+  }
+})
+
+export const createService = createAsyncThunk('services/createService', async (serviceData, { rejectWithValue }) => {
+  try {
+    const id = createId()
+    const payload = await buildServicePayload({ id, serviceData })
+    const { data, error } = await supabase.from('services').insert(payload).select().single()
+
+    if (error) {
+      throw new Error(error.message || 'Failed to create service')
+    }
+
+    return normalizeService(data)
+  } catch (error) {
+    return rejectWithValue(error.message || 'Failed to create service')
+  }
+})
 
 export const updateService = createAsyncThunk(
   'services/updateService',
-  async ({ id, serviceData }, { rejectWithValue }) => {
+  async ({ id, serviceData }, { rejectWithValue, getState }) => {
     try {
-      // Create FormData for multipart upload
-      const formData = new FormData()
-      
-      // Add basic fields
-      formData.append('category', serviceData.category)
-      formData.append('description', serviceData.description)
-      formData.append('feature_description', serviceData.feature_description)
-      
-      // Add objects as JSON strings (backend expects this)
-      formData.append('service_name', JSON.stringify(serviceData.service_name))
-      formData.append('feature_heading', JSON.stringify(serviceData.feature_heading))
-      formData.append('feature', JSON.stringify(serviceData.feature))
-      
-      // Add main image if it's a file
-      if (serviceData.imageFile) {
-        formData.append('image', serviceData.imageFile)
+      const existingService = getState().services.services.find((service) => service.id === id || service._id === id)
+      const payload = await buildServicePayload({ id, serviceData, existingService })
+      const { data, error } = await supabase.from('services').update(payload).eq('id', id).select().single()
+
+      if (error) {
+        throw new Error(error.message || 'Failed to update service')
       }
-      
-      // Add feature images
-      if (serviceData.feature && Array.isArray(serviceData.feature)) {
-        serviceData.feature.forEach((feat, index) => {
-          if (feat.imageFile) {
-            formData.append(`feature-image-${index}`, feat.imageFile)
-          }
-        })
-      }
-      
-      const response = await api.put(`/admin/services/${id}`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      })
-      
-      return response.data.service
+
+      return normalizeService(data)
     } catch (error) {
-      console.error('Update service error:', error)
-      return rejectWithValue(error.response?.data?.error || 'Failed to update service')
+      return rejectWithValue(error.message || 'Failed to update service')
     }
   }
 )
 
-export const deleteService = createAsyncThunk(
-  'services/deleteService',
-  async (id, { rejectWithValue }) => {
-    try {
-      await api.delete(`/admin/services/${id}`)
-      return id
-    } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to delete service')
+export const deleteService = createAsyncThunk('services/deleteService', async (id, { rejectWithValue, getState }) => {
+  try {
+    const existingService = getState().services.services.find((service) => service.id === id || service._id === id)
+
+    if (existingService?.image) {
+      await deletePublicFile({ bucket: 'services', publicUrl: existingService.image })
     }
+
+    for (const feature of ensureArray(existingService?.feature)) {
+      if (feature.image) {
+        await deletePublicFile({ bucket: 'services', publicUrl: feature.image })
+      }
+    }
+
+    const { error } = await supabase.from('services').delete().eq('id', id)
+
+    if (error) {
+      throw new Error(error.message || 'Failed to delete service')
+    }
+
+    return id
+  } catch (error) {
+    return rejectWithValue(error.message || 'Failed to delete service')
   }
-)
+})
 
 const initialState = {
   services: [],
@@ -175,7 +219,7 @@ const servicesSlice = createSlice({
       })
       .addCase(updateService.fulfilled, (state, action) => {
         state.loading = false
-        const index = state.services.findIndex(service => service._id === action.payload._id || service.id === action.payload.id)
+        const index = state.services.findIndex(service => service.id === action.payload.id)
         if (index !== -1) {
           state.services[index] = action.payload
         }
@@ -192,7 +236,7 @@ const servicesSlice = createSlice({
       })
       .addCase(deleteService.fulfilled, (state, action) => {
         state.loading = false
-        state.services = state.services.filter(service => service._id !== action.payload && service.id !== action.payload)
+        state.services = state.services.filter(service => service.id !== action.payload)
         state.error = null
       })
       .addCase(deleteService.rejected, (state, action) => {

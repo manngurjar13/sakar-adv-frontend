@@ -167,6 +167,32 @@ const ServiceForm = () => {
     }
   }
 
+  const addFeature = (values, setFieldValue) => {
+    const nextFeatures = [
+      ...(Array.isArray(values.feature) ? values.feature : []),
+      {
+        title: '',
+        description: '',
+        image: '',
+        imageFile: null,
+      },
+    ]
+
+    setFieldValue('feature', nextFeatures)
+  }
+
+  const removeFeature = (index, values, setFieldValue) => {
+    const currentFeatures = Array.isArray(values.feature) ? values.feature : []
+
+    if (currentFeatures.length <= 1) {
+      toast.error('At least one feature is required')
+      return
+    }
+
+    const nextFeatures = currentFeatures.filter((_, featureIndex) => featureIndex !== index)
+    setFieldValue('feature', nextFeatures)
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">

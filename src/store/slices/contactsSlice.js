@@ -1,14 +1,32 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
-import api from '../../config/api'
+import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
+import { supabase } from '../../lib/supabase'
+
+const normalizeContact = (contact) => ({
+  ...contact,
+  id: contact.id,
+  _id: contact.id,
+  services: Array.isArray(contact.services) ? contact.services : [],
+  isRead: Boolean(contact.is_read),
+  is_read: Boolean(contact.is_read),
+  createdAt: contact.created_at,
+})
 
 export const fetchContacts = createAsyncThunk(
   'contacts/fetchContacts',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await api.get('/contacts')
-      return response.data.contacts
+      const { data, error } = await supabase
+        .from('contacts')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        throw new Error(error.message || 'Failed to fetch contacts')
+      }
+
+      return (data || []).map(normalizeContact)
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch contacts')
+      return rejectWithValue(error.message || 'Failed to fetch contacts')
     }
   }
 )
@@ -17,10 +35,20 @@ export const markContactAsRead = createAsyncThunk(
   'contacts/markContactAsRead',
   async (id, { rejectWithValue }) => {
     try {
-      const response = await api.put(`/contacts/${id}/read`, {})
-      return response.data.contact
+      const { data, error } = await supabase
+        .from('contacts')
+        .update({ is_read: true })
+        .eq('id', id)
+        .select()
+        .single()
+
+      if (error) {
+        throw new Error(error.message || 'Failed to mark contact as read')
+      }
+
+      return normalizeContact(data)
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to mark contact as read')
+      return rejectWithValue(error.message || 'Failed to mark contact as read')
     }
   }
 )
@@ -29,10 +57,20 @@ export const updateContactStatus = createAsyncThunk(
   'contacts/updateContactStatus',
   async ({ id, status }, { rejectWithValue }) => {
     try {
-      const response = await api.put(`/contacts/${id}/status`, { status })
-      return response.data.contact
+      const { data, error } = await supabase
+        .from('contacts')
+        .update({ status })
+        .eq('id', id)
+        .select()
+        .single()
+
+      if (error) {
+        throw new Error(error.message || 'Failed to update contact status')
+      }
+
+      return normalizeContact(data)
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to update contact status')
+      return rejectWithValue(error.message || 'Failed to update contact status')
     }
   }
 )
@@ -41,10 +79,15 @@ export const deleteContact = createAsyncThunk(
   'contacts/deleteContact',
   async (id, { rejectWithValue }) => {
     try {
-      await api.delete(`/contacts/${id}`)
+      const { error } = await supabase.from('contacts').delete().eq('id', id)
+
+      if (error) {
+        throw new Error(error.message || 'Failed to delete contact')
+      }
+
       return id
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to delete contact')
+      return rejectWithValue(error.message || 'Failed to delete contact')
     }
   }
 )

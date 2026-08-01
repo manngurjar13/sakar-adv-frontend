@@ -1,4 +1,3 @@
-import React from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -20,6 +19,7 @@ import Contact from "./pages/Contact";
 import Services from "./pages/Services";
 import Advertising from "./pages/Advertising";
 import Events from "./pages/Events";
+import DynamicEventDetail from "./pages/events/DynamicEventDetail";
 
 // Admin Components
 import AdminLogin from "./pages/admin/AdminLogin";
@@ -27,7 +27,6 @@ import AdminLayout from "./components/admin/AdminLayout";
 import EventsList from "./pages/admin/EventsList";
 import EventForm from "./pages/admin/EventForm";
 import TestimonialsList from "./pages/admin/TestimonialsList";
-import TestimonialForm from "./pages/admin/TestimonialForm";
 import PortfolioList from "./pages/admin/PortfolioList";
 import PortfolioForm from "./pages/admin/PortfolioForm";
 import ContactsList from "./pages/admin/ContactsList";
@@ -37,36 +36,15 @@ import UpcomingEventList from "./pages/admin/UpcomingEventList";
 import ProtectedRoute from "./components/admin/ProtectedRoute";
 import ServicesList from "./pages/admin/ServicesList";
 import DynamicServiceDetail from "./pages/services/DynamicServiceDetail";
+import AdvertisingList from "./pages/admin/AdvertisingList";
+import AdvertisingForm from "./pages/admin/AdvertisingForm";
+import DynamicAdvertisingDetail from "./pages/advertising/DynamicAdvertisingDetail";
+import ProductsList from "./pages/admin/ProductsList";
+import ProductForm from "./pages/admin/ProductForm";
+import DynamicProductDetail from "./pages/products/DynamicProductDetail";
 
 // Public service subpages
 import VehicleBranding from "./pages/services/VehicleBranding";
-import AutoRickshaw from "./pages/services/AutoRickshaw";
-import ERickshawBranding from "./pages/services/ERickshawBranding";
-import BusAdvertising from "./pages/services/BusAdvertising";
-import MobileVan from "./pages/services/MobileVan";
-
-// Public product subpages
-import NoParkingBoards from "./pages/products/NoParkingBoards";
-import RollUpBanners from "./pages/products/RollUpBanners";
-import PromoTables from "./pages/products/PromoTables";
-import LEDSignage from "./pages/products/LEDSignage";
-import FlexPrinting from "./pages/products/FlexPrinting";
-import GlowSigns from "./pages/products/GlowSigns";
-
-// Public advertising subpages
-import OutdoorHoardings from "./pages/advertising/OutdoorHoardings";
-import Billboard from "./pages/advertising/Billboard";
-import FestivalBanners from "./pages/advertising/FestivalBanners";
-import FieldActivation from "./pages/advertising/FieldActivation";
-import BTLCampaigns from "./pages/advertising/BTLCampaigns";
-import NoParkingBoard from "./pages/services/NoParkingBoard";
-import Holding from "./pages/services/Holding";
-import WallPanting from "./pages/services/WallPanting";
-import LookwalkerActivity from "./pages/services/LookwalkerActivity";
-import NewspaperInsertion from "./pages/services/NewspaperInsertion";
-import AllTypesPrintingWork from "./pages/products/AllTypesPrintingWork";
-import Standy from "./pages/products/Standy";
-import FlangeBoard from "./pages/products/FlangeBoard";
 import ServiceForm from "./pages/admin/ServiceForm";
 
 function AppLayout({ children }) {
@@ -109,6 +87,7 @@ function App() {
               <Route path="/portfolio" element={<Portfolio />} />
               <Route path="/advertising" element={<Advertising />} />
               <Route path="/events" element={<Events />} />
+              <Route path="/events/:slug" element={<DynamicEventDetail />} />
               <Route path="/contact" element={<Contact />} />
 
               {/* Admin Routes */}
@@ -141,13 +120,7 @@ function App() {
               />
               <Route
                 path="/admin/events/create-upcoming"
-                element={
-                  <ProtectedRoute>
-                    <AdminLayout>
-                      <EventForm />
-                    </AdminLayout>
-                  </ProtectedRoute>
-                }
+                element={<Navigate to="/admin/upcoming-events" replace />}
               />
               <Route
                 path="/admin/events/:id"
@@ -183,33 +156,15 @@ function App() {
               />
               <Route
                 path="/admin/testimonials/create"
-                element={
-                  <ProtectedRoute>
-                    <AdminLayout>
-                      <TestimonialForm />
-                    </AdminLayout>
-                  </ProtectedRoute>
-                }
+                element={<Navigate to="/admin/testimonials" replace />}
               />
               <Route
                 path="/admin/testimonials/:id"
-                element={
-                  <ProtectedRoute>
-                    <AdminLayout>
-                      <TestimonialForm />
-                    </AdminLayout>
-                  </ProtectedRoute>
-                }
+                element={<Navigate to="/admin/testimonials" replace />}
               />
               <Route
                 path="/admin/testimonials/:id/edit"
-                element={
-                  <ProtectedRoute>
-                    <AdminLayout>
-                      <TestimonialForm />
-                    </AdminLayout>
-                  </ProtectedRoute>
-                }
+                element={<Navigate to="/admin/testimonials" replace />}
               />
 
               {/* Admin Portfolio Routes */}
@@ -344,11 +299,83 @@ function App() {
               {/* Redirect removed admin modules to events page */}
               <Route
                 path="/admin/products"
-                element={<Navigate to="/admin/events" replace />}
+                element={
+                  <ProtectedRoute>
+                    <AdminLayout>
+                      <ProductsList />
+                    </AdminLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/products/create"
+                element={
+                  <ProtectedRoute>
+                    <AdminLayout>
+                      <ProductForm />
+                    </AdminLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/products/:id"
+                element={
+                  <ProtectedRoute>
+                    <AdminLayout>
+                      <ProductForm />
+                    </AdminLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/products/:id/edit"
+                element={
+                  <ProtectedRoute>
+                    <AdminLayout>
+                      <ProductForm />
+                    </AdminLayout>
+                  </ProtectedRoute>
+                }
               />
               <Route
                 path="/admin/advertising"
-                element={<Navigate to="/admin/events" replace />}
+                element={
+                  <ProtectedRoute>
+                    <AdminLayout>
+                      <AdvertisingList />
+                    </AdminLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/advertising/create"
+                element={
+                  <ProtectedRoute>
+                    <AdminLayout>
+                      <AdvertisingForm />
+                    </AdminLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/advertising/:id"
+                element={
+                  <ProtectedRoute>
+                    <AdminLayout>
+                      <AdvertisingForm />
+                    </AdminLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/advertising/:id/edit"
+                element={
+                  <ProtectedRoute>
+                    <AdminLayout>
+                      <AdvertisingForm />
+                    </AdminLayout>
+                  </ProtectedRoute>
+                }
               />
 
               {/* Legacy Service Submenu Routes (kept for backwards compatibility) */}
@@ -390,37 +417,14 @@ function App() {
                 element={<DynamicServiceDetail />}
               />
 
-              {/* Product Submenu Routes */}
               <Route
-                path="/products/All-types-printing-work"
-                element={<AllTypesPrintingWork />}
+                path="/products/:slug"
+                element={<DynamicProductDetail />}
               />
-              <Route
-                path="/products/advertisement-prosomal-items"
-                element={<RollUpBanners />}
-              />
-              <Route path="/products/promo-tables" element={<PromoTables />} />
-              <Route path="/products/Steady" element={<Standy />} />
-              <Route path="/products/flange-board" element={<FlangeBoard />} />
-              <Route path="/products/sine-board" element={<GlowSigns />} />
 
-              {/* Advertising Submenu Routes */}
               <Route
-                path="/advertising/outdoor-hoardings"
-                element={<OutdoorHoardings />}
-              />
-              <Route path="/advertising/billboard" element={<Billboard />} />
-              <Route
-                path="/advertising/festival-banners"
-                element={<FestivalBanners />}
-              />
-              <Route
-                path="/advertising/field-activation"
-                element={<FieldActivation />}
-              />
-              <Route
-                path="/advertising/btl-campaigns"
-                element={<BTLCampaigns />}
+                path="/advertising/:slug"
+                element={<DynamicAdvertisingDetail />}
               />
             </Routes>
           </AppLayout>

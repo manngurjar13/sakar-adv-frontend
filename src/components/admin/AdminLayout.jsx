@@ -1,10 +1,8 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { useDispatch } from 'react-redux'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   MegaphoneIcon,
-  ShoppingBagIcon,
-  ChartBarIcon,
   CalendarDaysIcon,
   ChatBubbleLeftRightIcon,
   PhotoIcon,
@@ -42,8 +40,31 @@ const AdminLayout = ({ children }) => {
         { name: 'Create New Service', href: '/admin/services/create' }
       ]
     },
+    {
+      name: 'Products',
+      icon: Cog6ToothIcon,
+      submenu: [
+        { name: 'Manage Products', href: '/admin/products' },
+        { name: 'Create New Product', href: '/admin/products/create' }
+      ]
+    },
+    {
+      name: 'Advertising',
+      icon: MegaphoneIcon,
+      submenu: [
+        { name: 'Manage Advertising', href: '/admin/advertising' },
+        { name: 'Create New Advertising', href: '/admin/advertising/create' }
+      ]
+    },
     { name: 'Testimonials', href: '/admin/testimonials', icon: ChatBubbleLeftRightIcon },
-    { name: 'Portfolio', href: '/admin/portfolio', icon: PhotoIcon },
+    {
+      name: 'Portfolio',
+      icon: PhotoIcon,
+      submenu: [
+        { name: 'Manage Portfolio', href: '/admin/portfolio' },
+        { name: 'Create New Project', href: '/admin/portfolio/create' }
+      ]
+    },
     { name: 'Contacts', href: '/admin/contacts', icon: UserGroupIcon },
     { name: 'Contact Config', href: '/admin/contact-config', icon: Cog6ToothIcon },
   ]

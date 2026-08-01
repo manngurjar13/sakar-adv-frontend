@@ -1,21 +1,43 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
-import api from '../../config/api'
+import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
+import { createId } from '../../lib/supabaseData'
+import { supabase } from '../../lib/supabase'
+
+const normalizeTestimonial = (testimonial) => ({
+  ...testimonial,
+  id: testimonial.id,
+  _id: testimonial.id,
+  customerName: testimonial.customer_name || testimonial.customerName || testimonial.name || '',
+  customer_name: testimonial.customer_name || testimonial.customerName || testimonial.name || '',
+  name: testimonial.customer_name || testimonial.customerName || testimonial.name || '',
+  description: testimonial.description || testimonial.testimonial || '',
+  testimonial: testimonial.description || testimonial.testimonial || '',
+})
+
+const buildTestimonialPayload = (testimonialData, id) => ({
+  id,
+  customer_name: testimonialData.customerName ?? testimonialData.customer_name ?? testimonialData.name ?? '',
+  company: testimonialData.company || null,
+  rating: Number(testimonialData.rating || 0),
+  description: testimonialData.description ?? testimonialData.testimonial ?? '',
+  status: testimonialData.status || 'published',
+})
 
 export const fetchTestimonials = createAsyncThunk(
   'testimonials/fetchTestimonials',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await api.get('/testimonials')
-      // Map backend fields -> UI fields (MongoDB uses _id)
-      const testimonials = (response.data.testimonials || []).map(t => ({
-        ...t,
-        id: t._id, // MongoDB _id -> id for UI
-        name: t.customerName ?? t.name,
-        testimonial: t.description ?? t.testimonial,
-      }))
-      return testimonials
+      const { data, error } = await supabase
+        .from('testimonials')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        throw new Error(error.message || 'Failed to fetch testimonials')
+      }
+
+      return (data || []).map(normalizeTestimonial)
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch testimonials')
+      return rejectWithValue(error.message || 'Failed to fetch testimonials')
     }
   }
 )
@@ -24,24 +46,16 @@ export const createTestimonial = createAsyncThunk(
   'testimonials/createTestimonial',
   async (testimonialData, { rejectWithValue }) => {
     try {
-      const token = localStorage.getItem('adminToken')
-      // Transform UI -> backend payload
-      const payload = {
-        customerName: testimonialData.customerName ?? testimonialData.name,
-        rating: testimonialData.rating,
-        description: testimonialData.description ?? testimonialData.testimonial,
+      const payload = buildTestimonialPayload(testimonialData, createId())
+      const { data, error } = await supabase.from('testimonials').insert(payload).select().single()
+
+      if (error) {
+        throw new Error(error.message || 'Failed to create testimonial')
       }
-      const response = await api.post('/testimonials', payload)
-      const t = response.data.testimonial || response.data
-      // Normalize for UI (MongoDB uses _id)
-      return {
-        ...t,
-        id: t._id, // MongoDB _id -> id for UI
-        name: t.customerName ?? t.name,
-        testimonial: t.description ?? t.testimonial,
-      }
+
+      return normalizeTestimonial(data)
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to create testimonial')
+      return rejectWithValue(error.message || 'Failed to create testimonial')
     }
   }
 )
@@ -50,22 +64,21 @@ export const updateTestimonial = createAsyncThunk(
   'testimonials/updateTestimonial',
   async ({ id, testimonialData }, { rejectWithValue }) => {
     try {
-      const token = localStorage.getItem('adminToken')
-      // Transform UI -> backend payload
-      const payload = {
-        customerName: testimonialData.customerName ?? testimonialData.name,
-        rating: testimonialData.rating,
-        description: testimonialData.description ?? testimonialData.testimonial,
+      const payload = buildTestimonialPayload(testimonialData, id)
+      const { data, error } = await supabase
+        .from('testimonials')
+        .update(payload)
+        .eq('id', id)
+        .select()
+        .single()
+
+      if (error) {
+        throw new Error(error.message || 'Failed to update testimonial')
       }
-      const response = await api.put(`/testimonials/${id}`, payload)
-      const t = response.data.testimonial || response.data
-      return {
-        ...t,
-        name: t.customerName ?? t.name,
-        testimonial: t.description ?? t.testimonial,
-      }
+
+      return normalizeTestimonial(data)
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to update testimonial')
+      return rejectWithValue(error.message || 'Failed to update testimonial')
     }
   }
 )
@@ -74,13 +87,15 @@ export const deleteTestimonial = createAsyncThunk(
   'testimonials/deleteTestimonial',
   async (id, { rejectWithValue }) => {
     try {
-      console.log('deleteTestimonial thunk called with ID:', id)
-      const response = await api.delete(`/testimonials/${id}`)
-      console.log('Delete API response:', response)
+      const { error } = await supabase.from('testimonials').delete().eq('id', id)
+
+      if (error) {
+        throw new Error(error.message || 'Failed to delete testimonial')
+      }
+
       return id
     } catch (error) {
-      console.error('Delete API error:', error)
-      return rejectWithValue(error.response?.data?.error || 'Failed to delete testimonial')
+      return rejectWithValue(error.message || 'Failed to delete testimonial')
     }
   }
 )
@@ -155,11 +170,8 @@ const testimonialsSlice = createSlice({
         state.error = null
       })
       .addCase(deleteTestimonial.fulfilled, (state, action) => {
-        console.log('deleteTestimonial.fulfilled reducer called with payload:', action.payload)
-        console.log('Current testimonials count:', state.testimonials.length)
         state.loading = false
         state.testimonials = state.testimonials.filter(testimonial => testimonial.id !== action.payload)
-        console.log('After filter testimonials count:', state.testimonials.length)
         state.error = null
       })
       .addCase(deleteTestimonial.rejected, (state, action) => {

@@ -1,20 +1,60 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
-import api from '../../config/api'
+import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
+import { createId, getFileFromFormData, getStringFromFormData } from '../../lib/supabaseData'
+import { supabase } from '../../lib/supabase'
+import { deletePublicFile, uploadPublicFile } from '../../lib/supabaseStorage'
+
+const normalizeUpcomingEvent = (event) => ({
+  ...event,
+  id: event.id,
+  _id: event.id,
+  image: event.image || '',
+  createdAt: event.created_at,
+})
+
+const buildUpcomingEventPayload = async ({ id, eventData, existingEvent = null }) => {
+  let image = existingEvent?.image || null
+  const nextFile = getFileFromFormData(eventData, 'image')
+
+  if (nextFile) {
+    if (existingEvent?.image) {
+      await deletePublicFile({ bucket: 'upcoming-events', publicUrl: existingEvent.image })
+    }
+
+    image = await uploadPublicFile({
+      bucket: 'upcoming-events',
+      file: nextFile,
+      recordId: id,
+      folder: 'cover',
+    })
+  }
+
+  return {
+    id,
+    title: getStringFromFormData(eventData, 'title'),
+    date: getStringFromFormData(eventData, 'date') || null,
+    location: getStringFromFormData(eventData, 'location'),
+    description: getStringFromFormData(eventData, 'description'),
+    image,
+  }
+}
 
 // Async thunks for upcoming events
 export const fetchUpcomingEvents = createAsyncThunk(
   'upcomingEvents/fetchUpcomingEvents',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await api.get('/upcoming-events')
-      // Map MongoDB _id to id for UI consistency
-      const events = (response.data.events || response.data || []).map(event => ({
-        ...event,
-        id: event._id || event.id
-      }))
-      return events
+      const { data, error } = await supabase
+        .from('upcoming_events')
+        .select('*')
+        .order('date', { ascending: true, nullsFirst: false })
+
+      if (error) {
+        throw new Error(error.message || 'Failed to fetch upcoming events')
+      }
+
+      return (data || []).map(normalizeUpcomingEvent)
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch upcoming events')
+      return rejectWithValue(error.message || 'Failed to fetch upcoming events')
     }
   }
 )
@@ -23,53 +63,63 @@ export const createUpcomingEvent = createAsyncThunk(
   'upcomingEvents/createUpcomingEvent',
   async (eventData, { rejectWithValue }) => {
     try {
-      const response = await api.post('/upcoming-events', eventData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      })
-      const event = response.data.event || response.data
-      return {
-        ...event,
-        id: event._id || event.id
+      const id = createId()
+      const payload = await buildUpcomingEventPayload({ id, eventData })
+      const { data, error } = await supabase.from('upcoming_events').insert(payload).select().single()
+
+      if (error) {
+        throw new Error(error.message || 'Failed to create upcoming event')
       }
+
+      return normalizeUpcomingEvent(data)
     } catch (error) {
-      console.error('createUpcomingEvent error:', error)
-      return rejectWithValue(error.response?.data?.error || 'Failed to create upcoming event')
+      return rejectWithValue(error.message || 'Failed to create upcoming event')
     }
   }
 )
 
 export const updateUpcomingEvent = createAsyncThunk(
   'upcomingEvents/updateUpcomingEvent',
-  async ({ id, eventData }, { rejectWithValue }) => {
+  async ({ id, eventData }, { rejectWithValue, getState }) => {
     try {
-      const response = await api.put(`/upcoming-events/${id}`, eventData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      })
-      const event = response.data.event || response.data
-      return {
-        ...event,
-        id: event._id || event.id
+      const existingEvent = getState().upcomingEvents.events.find((event) => event.id === id)
+      const payload = await buildUpcomingEventPayload({ id, eventData, existingEvent })
+      const { data, error } = await supabase
+        .from('upcoming_events')
+        .update(payload)
+        .eq('id', id)
+        .select()
+        .single()
+
+      if (error) {
+        throw new Error(error.message || 'Failed to update upcoming event')
       }
+
+      return normalizeUpcomingEvent(data)
     } catch (error) {
-      console.error('updateUpcomingEvent error:', error)
-      return rejectWithValue(error.response?.data?.error || 'Failed to update upcoming event')
+      return rejectWithValue(error.message || 'Failed to update upcoming event')
     }
   }
 )
 
 export const deleteUpcomingEvent = createAsyncThunk(
   'upcomingEvents/deleteUpcomingEvent',
-  async (eventId, { rejectWithValue }) => {
+  async (eventId, { rejectWithValue, getState }) => {
     try {
-      await api.delete(`/upcoming-events/${eventId}`)
+      const existingEvent = getState().upcomingEvents.events.find((event) => event.id === eventId)
+      if (existingEvent?.image) {
+        await deletePublicFile({ bucket: 'upcoming-events', publicUrl: existingEvent.image })
+      }
+
+      const { error } = await supabase.from('upcoming_events').delete().eq('id', eventId)
+
+      if (error) {
+        throw new Error(error.message || 'Failed to delete upcoming event')
+      }
+
       return eventId
     } catch (error) {
-      console.error('deleteUpcomingEvent error:', error)
-      return rejectWithValue(error.response?.data?.error || 'Failed to delete upcoming event')
+      return rejectWithValue(error.message || 'Failed to delete upcoming event')
     }
   }
 )

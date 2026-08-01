@@ -1,6 +1,5 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { Link } from 'react-router-dom'
 import { Formik, Form, Field } from 'formik'
 import * as Yup from 'yup'
 import toast from 'react-hot-toast'
@@ -13,6 +12,7 @@ import {
 } from '@heroicons/react/24/outline'
 import { fetchEvents, deleteEvent, createEvent, updateEvent } from '../../store/slices/eventsSlice'
 import { getImageUrl } from '../../utils/imageUtils'
+import { EVENT_CATEGORY_OPTIONS, getEventCategoryLabel, normalizeEventCategory } from '../../lib/eventCategories'
 
 const EventsList = () => {
   const dispatch = useDispatch()
@@ -37,19 +37,7 @@ const EventsList = () => {
     }
   }
 
-  // Categories extracted from Events page
-  const categories = [
-    { value: 'normal', label: 'Normal Event' },
-    { value: 'corporate', label: 'Corporate Event' },
-    { value: 'social', label: 'Social Event' },
-    { value: 'cultural', label: 'Cultural Event' },
-    { value: 'birthday', label: 'Birthday Event' },
-    { value: 'wedding', label: 'Wedding Event' },
-    { value: 'conference', label: 'Conference' },
-    { value: 'workshop', label: 'Workshop' },
-    { value: 'seminar', label: 'Seminar' },
-    { value: 'festival', label: 'Festival' }
-  ]
+  const categories = EVENT_CATEGORY_OPTIONS
 
   const getValidationSchema = (isEdit) => Yup.object({
     name: Yup.string().required('Event title is required'),
@@ -65,7 +53,7 @@ const EventsList = () => {
       const formData = new FormData()
       formData.append('title', values.name)
       formData.append('description', values.description)
-      formData.append('category', values.category)
+      formData.append('category', normalizeEventCategory(values.category))
       formData.append('date', values.date)
       
       if (values.backgroundImage) {
@@ -193,7 +181,7 @@ const EventsList = () => {
                             ? 'bg-purple-100 text-purple-800'
                             : 'bg-gray-100 text-gray-800'
                         }`}>
-                          {event.type}
+                          {getEventCategoryLabel(event.category)}
                         </span>
                       </div>
                     </div>
@@ -253,7 +241,7 @@ const EventsList = () => {
                 initialValues={{
                   name: editingEvent?.name || '',
                   description: editingEvent?.description || '',
-                  category: editingEvent?.category || '',
+                  category: editingEvent?.category || 'corporate',
                   date: formatDateForInput(editingEvent?.date) || '',
                   backgroundImage: null
                 }}

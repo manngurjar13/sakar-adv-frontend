@@ -1,22 +1,22 @@
-import React, { useEffect } from 'react'
+import { useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { useNavigate, useParams, Link, useLocation } from 'react-router-dom'
+import { useNavigate, useParams, Link } from 'react-router-dom'
 import { Formik, Form, Field } from 'formik'
 import * as Yup from 'yup'
 import toast from 'react-hot-toast'
 import { createEvent, updateEvent, fetchEvents } from '../../store/slices/eventsSlice'
 import { getImageUrl } from '../../utils/imageUtils'
-import { ArrowLeftIcon, CalendarDaysIcon } from '@heroicons/react/24/outline'
+import { ArrowLeftIcon } from '@heroicons/react/24/outline'
+import { EVENT_CATEGORY_OPTIONS, normalizeEventCategory } from '../../lib/eventCategories'
 
 const EventForm = () => {
   const dispatch = useDispatch()
   const navigate = useNavigate()
-  const location = useLocation()
   const { id } = useParams()
   const isEdit = Boolean(id)
   
   const { events, loading } = useSelector((state) => state.events)
-  const event = events.find(e => e.id === parseInt(id))
+  const event = events.find((item) => item.id === id || item._id === id)
 
   useEffect(() => {
     if (isEdit && !event) {
@@ -29,51 +29,34 @@ const EventForm = () => {
     description: Yup.string().required('Description is required'),
     category: Yup.string().required('Category is required'),
     date: Yup.date().required('Event date is required'),
-    backgroundImage: Yup.mixed().required('Background image is required'),
+    backgroundImage: isEdit ? Yup.mixed().nullable() : Yup.mixed().required('Background image is required'),
   })
 
   const initialValues = {
     name: event?.name || '',
     description: event?.description || '',
-    category: event?.category || 'normal',
+    category: event?.category || 'corporate',
     date: event?.date || '',
     backgroundImage: event?.backgroundImage || null,
   }
 
   const handleSubmit = async (values, { setSubmitting, setFieldError }) => {
     try {
-      // Create FormData for file upload
       const formData = new FormData()
-      formData.append('name', values.name)
+      formData.append('title', values.name)
       formData.append('description', values.description)
-      formData.append('category', values.category)
+      formData.append('category', normalizeEventCategory(values.category))
       formData.append('date', values.date)
       
       if (values.backgroundImage) {
-        formData.append('backgroundImage', values.backgroundImage)
+        formData.append('image', values.backgroundImage)
       }
 
-      // Send to backend API
-      const url = isEdit ? `/api/events/${id}` : '/api/events'
-      const method = isEdit ? 'PUT' : 'POST'
-      
-      const response = await fetch(url, {
-        method: method,
-        body: formData,
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to save event')
-      }
-
-      const savedEvent = await response.json()
-      
-      // Update Redux store
       if (isEdit) {
-        await dispatch(updateEvent({ id: parseInt(id), eventData: savedEvent })).unwrap()
+        await dispatch(updateEvent({ id, eventData: formData })).unwrap()
         toast.success('Event updated successfully!')
       } else {
-        await dispatch(createEvent(savedEvent)).unwrap()
+        await dispatch(createEvent(formData)).unwrap()
         toast.success('Event created successfully!')
       }
       
@@ -160,16 +143,11 @@ const EventForm = () => {
                     className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                   >
                     <option value="">Select Category</option>
-                    <option value="normal">Normal Event</option>
-                    <option value="corporate">Corporate Event</option>
-                    <option value="social">Social Event</option>
-                    <option value="cultural">Cultural Event</option>
-                    <option value="birthday">Birthday Event</option>
-                    <option value="wedding">Wedding Event</option>
-                    <option value="conference">Conference</option>
-                    <option value="workshop">Workshop</option>
-                    <option value="seminar">Seminar</option>
-                    <option value="festival">Festival</option>
+                    {EVENT_CATEGORY_OPTIONS.map((category) => (
+                      <option key={category.value} value={category.value}>
+                        {category.label}
+                      </option>
+                    ))}
                   </Field>
                   {errors.category && touched.category && (
                     <p className="mt-1 text-sm text-red-600">{errors.category}</p>

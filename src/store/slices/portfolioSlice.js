@@ -1,20 +1,61 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
-import api from '../../config/api'
+import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
+import { createId, getFileFromFormData, getStringFromFormData } from '../../lib/supabaseData'
+import { supabase } from '../../lib/supabase'
+import { deletePublicFile, uploadPublicFile } from '../../lib/supabaseStorage'
+
+const normalizePortfolioItem = (item) => ({
+  ...item,
+  id: item.id,
+  _id: item.id,
+  image: item.image || '',
+  createdAt: item.created_at,
+})
+
+const buildPortfolioPayload = async ({ id, portfolioData, existingItem = null }) => {
+  let image = existingItem?.image || null
+  const nextFile = getFileFromFormData(portfolioData, 'image')
+
+  if (nextFile) {
+    if (existingItem?.image) {
+      await deletePublicFile({ bucket: 'portfolio', publicUrl: existingItem.image })
+    }
+
+    image = await uploadPublicFile({
+      bucket: 'portfolio',
+      file: nextFile,
+      recordId: id,
+      folder: 'cover',
+    })
+  }
+
+  return {
+    id,
+    title: getStringFromFormData(portfolioData, 'title'),
+    description: getStringFromFormData(portfolioData, 'description'),
+    category: getStringFromFormData(portfolioData, 'category'),
+    status: getStringFromFormData(portfolioData, 'status') || 'published',
+    client: getStringFromFormData(portfolioData, 'client') || null,
+    year: getStringFromFormData(portfolioData, 'year') || null,
+    image,
+  }
+}
 
 export const fetchPortfolio = createAsyncThunk(
   'portfolio/fetchPortfolio',
   async (_, { rejectWithValue }) => {
     try {
-      // Public endpoint - no authentication required
-      const response = await api.get('/portfolio')
-      // Map MongoDB _id to id for UI consistency
-      const portfolio = (response.data.portfolio || response.data || []).map(item => ({
-        ...item,
-        id: item._id || item.id
-      }))
-      return portfolio
+      const { data, error } = await supabase
+        .from('portfolio_items')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        throw new Error(error.message || 'Failed to fetch portfolio')
+      }
+
+      return (data || []).map(normalizePortfolioItem)
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch portfolio')
+      return rejectWithValue(error.message || 'Failed to fetch portfolio')
     }
   }
 )
@@ -23,50 +64,63 @@ export const createPortfolioItem = createAsyncThunk(
   'portfolio/createPortfolioItem',
   async (portfolioData, { rejectWithValue }) => {
     try {
-      const response = await api.post('/portfolio', portfolioData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      })
-      const item = response.data.portfolioItem || response.data
-      return {
-        ...item,
-        id: item._id || item.id
+      const id = createId()
+      const payload = await buildPortfolioPayload({ id, portfolioData })
+      const { data, error } = await supabase.from('portfolio_items').insert(payload).select().single()
+
+      if (error) {
+        throw new Error(error.message || 'Failed to create portfolio item')
       }
+
+      return normalizePortfolioItem(data)
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to create portfolio item')
+      return rejectWithValue(error.message || 'Failed to create portfolio item')
     }
   }
 )
 
 export const updatePortfolioItem = createAsyncThunk(
   'portfolio/updatePortfolioItem',
-  async ({ id, portfolioData }, { rejectWithValue }) => {
+  async ({ id, portfolioData }, { rejectWithValue, getState }) => {
     try {
-      const response = await api.put(`/portfolio/${id}`, portfolioData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      })
-      const item = response.data.portfolioItem || response.data
-      return {
-        ...item,
-        id: item._id || item.id
+      const existingItem = getState().portfolio.portfolio.find((item) => item.id === id)
+      const payload = await buildPortfolioPayload({ id, portfolioData, existingItem })
+      const { data, error } = await supabase
+        .from('portfolio_items')
+        .update(payload)
+        .eq('id', id)
+        .select()
+        .single()
+
+      if (error) {
+        throw new Error(error.message || 'Failed to update portfolio item')
       }
+
+      return normalizePortfolioItem(data)
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to update portfolio item')
+      return rejectWithValue(error.message || 'Failed to update portfolio item')
     }
   }
 )
 
 export const deletePortfolioItem = createAsyncThunk(
   'portfolio/deletePortfolioItem',
-  async (id, { rejectWithValue }) => {
+  async (id, { rejectWithValue, getState }) => {
     try {
-      await api.delete(`/portfolio/${id}`)
+      const existingItem = getState().portfolio.portfolio.find((item) => item.id === id)
+      if (existingItem?.image) {
+        await deletePublicFile({ bucket: 'portfolio', publicUrl: existingItem.image })
+      }
+
+      const { error } = await supabase.from('portfolio_items').delete().eq('id', id)
+
+      if (error) {
+        throw new Error(error.message || 'Failed to delete portfolio item')
+      }
+
       return id
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to delete portfolio item')
+      return rejectWithValue(error.message || 'Failed to delete portfolio item')
     }
   }
 )

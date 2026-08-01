@@ -1,53 +1,57 @@
-import React from 'react'
+import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { useDispatch, useSelector } from 'react-redux'
+import { fetchAdvertising } from '../store/slices/advertisingSlice'
+import { getImageUrl } from '../utils/imageUtils'
 
 const Advertising = () => {
-  const advertisingServices = [
-    {
-      id: 1,
-      title: "Outdoor Hoardings",
-      description: "Large format outdoor hoardings for maximum visibility and brand impact. Perfect for highways, busy streets, and high-traffic areas.",
-      image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
-      link: "/advertising/outdoor-hoardings",
-      features: ["High visibility", "Weather resistant", "Large format", "Strategic placement"]
-    },
-    {
-      id: 2,
-      title: "Billboard Advertising",
-      description: "Premium billboard advertising solutions for maximum reach and impact. Strategic placement in high-traffic locations.",
-      image: "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
-      link: "/advertising/billboard",
-      features: ["Premium locations", "High traffic areas", "Professional design", "Maximum reach"]
-    },
-    {
-      id: 3,
-      title: "Festival Banners",
-      description: "Eye-catching festival banners for events, celebrations, and special occasions. Custom designs for memorable impact.",
-      image: "https://images.unsplash.com/photo-1515187029135-18ee286d815b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
-      link: "/advertising/festival-banners",
-      features: ["Event marketing", "Custom designs", "Festive themes", "Memorable impact"]
-    },
-    {
-      id: 4,
-      title: "Field Activation",
-      description: "Comprehensive field activation campaigns for sports events, concerts, and outdoor activities. Complete branding solutions.",
-      image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
-      link: "/advertising/field-activation",
-      features: ["Event branding", "Complete solutions", "Sports marketing", "Audience engagement"]
-    },
-    {
-      id: 5,
-      title: "BTL Campaigns",
-      description: "Below-the-line marketing campaigns for targeted audience engagement. Personalized and interactive advertising solutions.",
-      image: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
-      link: "/advertising/btl-campaigns",
-      features: ["Targeted marketing", "Interactive campaigns", "Personalized approach", "Direct engagement"]
-    }
-  ]
+  const dispatch = useDispatch()
+  const { advertising, loading, error } = useSelector((state) => state.advertising)
+
+  useEffect(() => {
+    dispatch(fetchAdvertising())
+  }, [dispatch])
+
+  const getAdvertisingLink = (item) => {
+    const slug = item.advertising_name?.str1?.toLowerCase().replace(/\s+/g, '-') || item._id
+    return `/advertising/${slug}`
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="flex flex-col items-center">
+          <div className="w-12 h-12 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin"></div>
+          <p className="mt-4 text-gray-600">Loading advertising...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <section className="relative bg-gradient-to-r from-purple-600 to-purple-800 text-white py-20">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center">
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-6">
+                Advertising Solutions
+              </h1>
+              <p className="text-xl sm:text-2xl mb-8 max-w-3xl mx-auto">
+                Comprehensive advertising campaigns and solutions to maximize your brand reach and impact
+              </p>
+            </div>
+          </div>
+        </section>
+        <section className="py-16 text-center">
+          <p className="text-red-600 text-lg">Error loading advertising. Please try again later.</p>
+        </section>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Hero Section */}
       <section className="relative bg-gradient-to-r from-purple-600 to-purple-800 text-white py-20">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
@@ -69,78 +73,81 @@ const Advertising = () => {
         </div>
       </section>
 
-      {/* Advertising Services Grid */}
       <section className="py-16 sm:py-20">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
-              Our Advertising Services
+              Our Advertising Solutions
             </h2>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              From outdoor hoardings to field activations, we provide complete advertising solutions
+              Create and manage the full advertising catalog dynamically from the admin panel
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {advertisingServices.map((service) => (
-              <div key={service.id} className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
-                <div className="relative">
-                  <img
-                    src={service.image}
-                    alt={service.title}
-                    className="w-full h-48 object-cover"
-                  />
-                  <div className="absolute inset-0 bg-black bg-opacity-40"></div>
-                  <div className="absolute bottom-4 left-4 right-4">
-                    <h3 className="text-white text-xl font-bold mb-2">{service.title}</h3>
+          {advertising && advertising.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {advertising.map((item) => (
+                <div key={item.id} className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
+                  <div className="relative">
+                    <img
+                      src={
+                        getImageUrl(item.image || item.image_url) ||
+                        'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80'
+                      }
+                      alt={item.advertising_name?.str1 || 'Advertising'}
+                      className="w-full h-48 object-cover"
+                    />
+                    <div className="absolute inset-0 bg-black bg-opacity-40"></div>
+                    <div className="absolute bottom-4 left-4 right-4">
+                      <h3 className="text-white text-xl font-bold mb-2">
+                        {item.advertising_name?.str1 || 'Advertising'}
+                      </h3>
+                      {item.advertising_name?.str2 && (
+                        <p className="text-white text-sm opacity-90">
+                          {item.advertising_name.str2}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="p-6">
+                    <p className="text-gray-600 mb-4">
+                      {item.description || 'Professional advertising solutions tailored to your brand.'}
+                    </p>
+                    {(item.feature || item.features)?.length > 0 && (
+                      <ul className="space-y-2 mb-6">
+                        {(item.feature || item.features).slice(0, 3).map((feature, index) => (
+                          <li key={index} className="flex items-center text-sm text-gray-600">
+                            <svg className="w-4 h-4 text-purple-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                            {feature.title || `Feature ${index + 1}`}
+                          </li>
+                        ))}
+                        {(item.feature || item.features).length > 3 && (
+                          <li className="text-sm text-purple-600 font-semibold">
+                            + {(item.feature || item.features).length - 3} more features
+                          </li>
+                        )}
+                      </ul>
+                    )}
+                    <Link
+                      to={getAdvertisingLink(item)}
+                      className="block w-full bg-purple-600 text-white text-center py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors"
+                    >
+                      Learn More
+                    </Link>
                   </div>
                 </div>
-                <div className="p-6">
-                  <p className="text-gray-600 mb-4">{service.description}</p>
-                  <ul className="space-y-2 mb-6">
-                    {service.features.map((feature, index) => (
-                      <li key={index} className="flex items-center text-sm text-gray-600">
-                        <svg className="w-4 h-4 text-purple-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-                  <Link
-                    to={service.link}
-                    className="block w-full bg-purple-600 text-white text-center py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors"
-                  >
-                    Learn More
-                  </Link>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-gray-600 text-lg">No advertising items available at the moment.</p>
+            </div>
+          )}
         </div>
       </section>
 
-      {/* Stats Section */}
-      <section className="bg-gray-100 py-16">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-            <div className="bg-white p-8 rounded-lg shadow-md">
-              <div className="text-4xl font-bold text-purple-600 mb-2">500+</div>
-              <div className="text-gray-600">Campaigns Completed</div>
-            </div>
-            <div className="bg-white p-8 rounded-lg shadow-md">
-              <div className="text-4xl font-bold text-purple-600 mb-2">50+</div>
-              <div className="text-gray-600">Happy Clients</div>
-            </div>
-            <div className="bg-white p-8 rounded-lg shadow-md">
-              <div className="text-4xl font-bold text-purple-600 mb-2">5+</div>
-              <div className="text-gray-600">Years Experience</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
       <section className="bg-purple-600 text-white py-16">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl sm:text-4xl font-bold mb-4">

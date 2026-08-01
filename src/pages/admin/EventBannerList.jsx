@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Formik, Form, Field } from 'formik'
 import * as Yup from 'yup'
@@ -11,6 +11,7 @@ import {
   clearError
 } from '../../store/slices/eventBannerSlice'
 import { getImageUrl } from '../../utils/imageUtils'
+import { normalizeImageToAspectRatio } from '../../lib/imageProcessing'
 import {
   PlusIcon,
   PencilIcon,
@@ -161,7 +162,7 @@ const EventBannerList = () => {
               <img
                 src={getImageUrl(banner.bannerImage)}
                 alt={banner.title}
-                className="w-full h-48 object-cover"
+                className="w-full aspect-video object-cover"
                 onError={(e) => {
                   e.target.src = 'https://via.placeholder.com/400x200?text=No+Image'
                 }}
@@ -306,7 +307,7 @@ const EventBannerList = () => {
                   <img
                     src={getImageUrl(viewingBanner.bannerImage)}
                     alt="Banner"
-                    className="w-full h-64 object-cover rounded"
+                    className="w-full aspect-video object-cover rounded"
                     onError={(e) => { e.target.src = 'https://via.placeholder.com/800x300?text=No+Image' }}
                   />
                 </div>
@@ -370,15 +371,31 @@ const BannerModal = ({ banner, onSubmit, onClose, isSubmitting }) => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Background Image *
                   </label>
+                  <p className="mb-2 text-xs text-gray-500">
+                    Banner uploads are automatically normalized to a `16:9` landscape ratio for the events hero slider.
+                  </p>
                   <Field name="bannerImage">
                     {({ field, form }) => (
                       <div>
                         <input
                           type="file"
                           accept="image/*"
-                          onChange={(event) => {
-                            const file = event.currentTarget.files[0];
-                            form.setFieldValue('bannerImage', file);
+                          onChange={async (event) => {
+                            const file = event.currentTarget.files[0]
+                            if (!file) return
+
+                            try {
+                              const normalizedFile = await normalizeImageToAspectRatio({
+                                file,
+                                targetWidth: 1920,
+                                targetHeight: 1080,
+                              })
+                              form.setFieldValue('bannerImage', normalizedFile)
+                              toast.success('Banner image adjusted to 16:9 ratio')
+                            } catch (error) {
+                              form.setFieldValue('bannerImage', file)
+                              toast.error('Could not normalize the banner image, using original file')
+                            }
                           }}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         />
@@ -391,7 +408,7 @@ const BannerModal = ({ banner, onSubmit, onClose, isSubmitting }) => {
                               <img
                                 src={URL.createObjectURL(field.value)}
                                 alt="Preview"
-                                className="w-32 h-20 object-cover rounded border"
+                                className="w-full max-w-md aspect-video object-cover rounded border"
                               />
                             </div>
                           </div>
@@ -404,7 +421,7 @@ const BannerModal = ({ banner, onSubmit, onClose, isSubmitting }) => {
                               <img
                                 src={getImageUrl(field.value)}
                                 alt="Current"
-                                className="w-32 h-20 object-cover rounded border"
+                                className="w-full max-w-md aspect-video object-cover rounded border"
                               />
                             </div>
                           </div>

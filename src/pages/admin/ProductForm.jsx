@@ -1,10 +1,11 @@
-import React, { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate, useParams, Link } from 'react-router-dom'
 import { Formik, Form, Field } from 'formik'
 import * as Yup from 'yup'
 import { createProduct, updateProduct, fetchProducts } from '../../store/slices/productsSlice'
 import { ArrowLeftIcon } from '@heroicons/react/24/outline'
+import toast from 'react-hot-toast'
 
 const ProductForm = () => {
   const dispatch = useDispatch()
@@ -13,7 +14,8 @@ const ProductForm = () => {
   const isEdit = Boolean(id)
   
   const { products, loading } = useSelector((state) => state.products)
-  const product = products.find(p => p.id === parseInt(id))
+  const product = products.find((item) => item.id === id || item._id === id)
+  const [uploadingImage, setUploadingImage] = useState(false)
 
   useEffect(() => {
     if (isEdit && !product) {
@@ -27,7 +29,7 @@ const ProductForm = () => {
     price: Yup.number().required('Price is required').min(0, 'Price must be positive'),
     category: Yup.string().required('Category is required'),
     status: Yup.string().oneOf(['active', 'inactive', 'draft']).required('Status is required'),
-    image: Yup.string().url('Must be a valid URL'),
+    image: Yup.string().required('Product image is required'),
     features: Yup.array().of(Yup.string()).min(1, 'At least one feature is required'),
   })
 
@@ -36,24 +38,66 @@ const ProductForm = () => {
     description: product?.description || '',
     price: product?.price || '',
     category: product?.category || '',
-    status: product?.status || 'draft',
+    status: product?.status || 'active',
     image: product?.image || '',
+    imageFile: null,
     features: product?.features || [''],
   }
 
   const handleSubmit = async (values, { setSubmitting, setFieldError }) => {
     try {
+      const productData = {
+        name: values.name,
+        description: values.description,
+        price: values.price,
+        category: values.category,
+        status: values.status,
+        image: values.image || null,
+        imageFile: values.imageFile || null,
+        features: values.features || [],
+      }
+
       if (isEdit) {
-        await dispatch(updateProduct({ id: parseInt(id), productData: values })).unwrap()
+        await dispatch(updateProduct({ id, productData })).unwrap()
+        toast.success('Product updated successfully!')
       } else {
-        await dispatch(createProduct(values)).unwrap()
+        await dispatch(createProduct(productData)).unwrap()
+        toast.success('Product created successfully!')
       }
       navigate('/admin/products')
     } catch (error) {
-      console.error('Form submission failed:', error)
-      setFieldError('general', 'An error occurred while saving the product')
+      const errorMessage = error?.message || error || 'An error occurred while saving the product'
+      toast.error(errorMessage)
+      setFieldError('general', errorMessage)
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  const handleImageUpload = async (e, setFieldValue) => {
+    const file = e.target.files[0]
+    if (!file) return
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image size must be less than 5MB')
+      return
+    }
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Only image files are allowed')
+      return
+    }
+
+    try {
+      setUploadingImage(true)
+      const previewUrl = URL.createObjectURL(file)
+      setFieldValue('image', previewUrl)
+      setFieldValue('imageFile', file)
+      toast.success('Product image selected')
+    } catch (error) {
+      toast.error('Failed to select image')
+    } finally {
+      setUploadingImage(false)
     }
   }
 
@@ -72,7 +116,7 @@ const ProductForm = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
       </div>
     )
   }
@@ -122,7 +166,7 @@ const ProductForm = () => {
                     id="name"
                     name="name"
                     type="text"
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm p-2"
                   />
                   {errors.name && touched.name && (
                     <p className="mt-1 text-sm text-red-600">{errors.name}</p>
@@ -139,7 +183,7 @@ const ProductForm = () => {
                     type="number"
                     min="0"
                     step="0.01"
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm p-2"
                   />
                   {errors.price && touched.price && (
                     <p className="mt-1 text-sm text-red-600">{errors.price}</p>
@@ -156,7 +200,7 @@ const ProductForm = () => {
                   id="description"
                   name="description"
                   rows={4}
-                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm p-2"
                 />
                 {errors.description && touched.description && (
                   <p className="mt-1 text-sm text-red-600">{errors.description}</p>
@@ -172,15 +216,15 @@ const ProductForm = () => {
                     as="select"
                     id="category"
                     name="category"
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm p-2"
                   >
                     <option value="">Select Category</option>
-                    <option value="no-parking-boards">No Parking Boards</option>
-                    <option value="roll-up-banners">Roll-Up Banners</option>
-                    <option value="promo-tables">Promo Tables</option>
-                    <option value="led-signage">LED Signage</option>
-                    <option value="flex-printing">Flex Printing</option>
-                    <option value="glow-signs">Glow Signs</option>
+                    <option value="no parking boards">No Parking Boards</option>
+                    <option value="roll up banners">Roll-Up Banners</option>
+                    <option value="promo tables">Promo Tables</option>
+                    <option value="led signage">LED Signage</option>
+                    <option value="flex printing">Flex Printing</option>
+                    <option value="glow signs">Glow Signs</option>
                   </Field>
                   {errors.category && touched.category && (
                     <p className="mt-1 text-sm text-red-600">{errors.category}</p>
@@ -195,7 +239,7 @@ const ProductForm = () => {
                     as="select"
                     id="status"
                     name="status"
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm p-2"
                   >
                     <option value="draft">Draft</option>
                     <option value="active">Active</option>
@@ -212,12 +256,12 @@ const ProductForm = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Features *
                 </label>
-                {values.features.map((feature, index) => (
+                {values.features.map((_, index) => (
                   <div key={index} className="flex items-center space-x-2 mb-2">
                     <Field
                       name={`features.${index}`}
                       type="text"
-                      className="flex-1 border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      className="flex-1 border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm p-2"
                       placeholder="Enter feature"
                     />
                     {values.features.length > 1 && (
@@ -234,7 +278,7 @@ const ProductForm = () => {
                 <button
                   type="button"
                   onClick={() => addFeature(values, setFieldValue)}
-                  className="text-blue-600 hover:text-blue-900 text-sm"
+                  className="text-green-600 hover:text-green-900 text-sm"
                 >
                   + Add Feature
                 </button>
@@ -246,15 +290,35 @@ const ProductForm = () => {
               {/* Image URL */}
               <div>
                 <label htmlFor="image" className="block text-sm font-medium text-gray-700">
-                  Image URL
+                  Product Image *
                 </label>
-                <Field
-                  id="image"
-                  name="image"
-                  type="url"
-                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  placeholder="https://example.com/image.jpg"
-                />
+                <div className="mt-1 flex items-center space-x-4">
+                  <Field
+                    id="image"
+                    name="image"
+                    type="url"
+                    className="flex-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm p-2"
+                    placeholder="https://example.com/image.jpg"
+                  />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleImageUpload(e, setFieldValue)}
+                    className="hidden"
+                    id="product-image-upload"
+                  />
+                  <label
+                    htmlFor="product-image-upload"
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 cursor-pointer"
+                  >
+                    {uploadingImage ? 'Uploading...' : 'Upload'}
+                  </label>
+                </div>
+                {values.image && (
+                  <div className="mt-2">
+                    <img src={values.image} alt="Preview" className="h-32 w-32 object-cover rounded" />
+                  </div>
+                )}
                 {errors.image && touched.image && (
                   <p className="mt-1 text-sm text-red-600">{errors.image}</p>
                 )}
@@ -264,14 +328,14 @@ const ProductForm = () => {
               <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
                 <Link
                   to="/admin/products"
-                  className="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  className="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                 >
                   Cancel
                 </Link>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                  className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
                 >
                   {isSubmitting ? 'Saving...' : isEdit ? 'Update Product' : 'Create Product'}
                 </button>

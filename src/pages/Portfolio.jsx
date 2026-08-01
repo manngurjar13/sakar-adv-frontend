@@ -1,103 +1,17 @@
-import React, { useEffect } from 'react'
+import { useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { fetchPortfolio } from '../store/slices/portfolioSlice'
 import { getImageUrl } from '../utils/imageUtils'
 
 const Portfolio = () => {
   const dispatch = useDispatch()
-  const { portfolio, loading } = useSelector(state => state.portfolio)
-
-  // Fallback portfolio items in case API fails
-  const fallbackPortfolioItems = [
-    {
-      id: 1,
-      title: "Brand Identity Design",
-      category: "Design",
-      image: "https://images.unsplash.com/photo-1558655146-d09347e92766?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
-      description: "Complete brand identity package for a tech startup including logo design, brand guidelines, and marketing materials.",
-      client: "TechCorp Solutions",
-      year: "2024"
-    },
-    {
-      id: 2,
-      title: "Digital Marketing Campaign",
-      category: "Advertising",
-      image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
-      description: "Multi-platform digital marketing strategy and execution that increased brand awareness by 300%.",
-      client: "E-Commerce Plus",
-      year: "2024"
-    },
-    {
-      id: 3,
-      title: "Corporate Event",
-      category: "Events",
-      image: "https://images.unsplash.com/photo-1511578314322-379afb476865?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
-      description: "Annual corporate conference with 500+ attendees featuring keynote speakers and networking sessions.",
-      client: "Global Industries",
-      year: "2023"
-    },
-    {
-      id: 4,
-      title: "Social Media Strategy",
-      category: "Digital",
-      image: "https://images.unsplash.com/photo-1611224923853-80b023f02d71?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
-      description: "Comprehensive social media strategy and content creation that grew followers by 500% in 6 months.",
-      client: "Fashion Forward",
-      year: "2024"
-    },
-    {
-      id: 5,
-      title: "Product Launch Event",
-      category: "Events",
-      image: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
-      description: "Innovative product launch event with interactive experiences and live demonstrations.",
-      client: "InnovateTech",
-      year: "2023"
-    },
-    {
-      id: 6,
-      title: "Website Design",
-      category: "Design",
-      image: "https://images.unsplash.com/photo-1467232004584-a241de8bcf5d?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
-      description: "Modern, responsive website design and development with seamless user experience.",
-      client: "Creative Studio",
-      year: "2024"
-    },
-    {
-      id: 7,
-      title: "Outdoor Advertising",
-      category: "Advertising",
-      image: "https://images.unsplash.com/photo-1542744173-8e7e53415bb0?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
-      description: "Strategic outdoor advertising campaign across major highways and city centers.",
-      client: "City Motors",
-      year: "2023"
-    },
-    {
-      id: 8,
-      title: "Mobile App Design",
-      category: "Digital",
-      image: "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
-      description: "User-centered mobile application design with intuitive interface and smooth interactions.",
-      client: "HealthTech Solutions",
-      year: "2024"
-    },
-    {
-      id: 9,
-      title: "Wedding Event Planning",
-      category: "Events",
-      image: "https://images.unsplash.com/photo-1519225421980-715cb0215aed?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
-      description: "Luxury wedding event planning with custom decorations and seamless coordination.",
-      client: "Royal Weddings",
-      year: "2023"
-    }
-  ]
+  const { portfolio, loading, error } = useSelector(state => state.portfolio)
 
   useEffect(() => {
     dispatch(fetchPortfolio())
   }, [dispatch])
 
-  // Use API data if available, otherwise use fallback data
-  const portfolioItems = portfolio.length > 0 ? portfolio : fallbackPortfolioItems
+  const portfolioItems = (portfolio || []).filter((item) => item.status === 'published')
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -150,7 +64,7 @@ const Portfolio = () => {
               <span className="bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent"> Work Portfolio</span>
             </h2>
             <p className="text-lg text-gray-600 max-w-3xl mx-auto mb-8">
-              From brand identity design to digital marketing campaigns, discover the projects that showcase our creative expertise.
+              Explore real projects uploaded from the admin panel, including project image, name, and description.
             </p>
           </div>
 
@@ -172,6 +86,18 @@ const Portfolio = () => {
                   </div>
                 </div>
               ))
+            ) : error ? (
+              <div className="col-span-full flex flex-col items-center justify-center py-16">
+                <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mb-6">
+                  <svg className="w-10 h-10 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M4.93 19h14.14c1.54 0 2.5-1.67 1.73-3L13.73 4c-.77-1.33-2.69-1.33-3.46 0L3.2 16c-.77 1.33.19 3 1.73 3z" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-bold text-gray-700 mb-4">Unable To Load Portfolio</h3>
+                <p className="text-gray-500 text-center max-w-md">
+                  Please try again later.
+                </p>
+              </div>
             ) : portfolioItems.length > 0 ? (
               portfolioItems.map((item) => (
                 <div key={item.id} className="group bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
@@ -225,16 +151,15 @@ const Portfolio = () => {
                 </div>
               ))
             ) : (
-              // Empty state
               <div className="col-span-full flex flex-col items-center justify-center py-16">
                 <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-6">
                   <svg className="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                   </svg>
                 </div>
-                <h3 className="text-xl font-bold text-gray-700 mb-4">No Portfolio Items</h3>
+                <h3 className="text-xl font-bold text-gray-700 mb-4">No Portfolio Projects Yet</h3>
                 <p className="text-gray-500 text-center max-w-md">
-                  We're working on adding amazing portfolio items. Check back soon!
+                  Add your first project from the admin panel with image, project name, and description.
                 </p>
               </div>
             )}

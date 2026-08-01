@@ -1,21 +1,66 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
-import api from '../../config/api'
+import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
+import { createId, getFileFromFormData, getStringFromFormData } from '../../lib/supabaseData'
+import { supabase } from '../../lib/supabase'
+import { deletePublicFile, uploadPublicFile } from '../../lib/supabaseStorage'
+import { getEventCategoryLabel, normalizeEventCategory, slugifyEventTitle } from '../../lib/eventCategories'
+
+const normalizeEvent = (event) => ({
+  ...event,
+  id: event.id,
+  _id: event.id,
+  title: event.title || event.name || '',
+  name: event.title || event.name || '',
+  image: event.image || event.backgroundImage || '',
+  backgroundImage: event.image || event.backgroundImage || '',
+  category: normalizeEventCategory(event.category || event.type || 'normal'),
+  categoryLabel: getEventCategoryLabel(event.category || event.type || 'normal'),
+  type: normalizeEventCategory(event.category || event.type || 'normal'),
+  slug: slugifyEventTitle(event.title || event.name || 'event'),
+})
+
+const buildEventPayload = async ({ id, eventData, existingEvent = null }) => {
+  let image = existingEvent?.image || null
+  const nextFile = getFileFromFormData(eventData, 'image')
+
+  if (nextFile) {
+    if (existingEvent?.image) {
+      await deletePublicFile({ bucket: 'events', publicUrl: existingEvent.image })
+    }
+
+    image = await uploadPublicFile({
+      bucket: 'events',
+      file: nextFile,
+      recordId: id,
+      folder: 'cover',
+    })
+  }
+
+  return {
+    id,
+    title: getStringFromFormData(eventData, 'title'),
+    description: getStringFromFormData(eventData, 'description'),
+    category: normalizeEventCategory(getStringFromFormData(eventData, 'category') || 'normal'),
+    date: getStringFromFormData(eventData, 'date') || null,
+    image,
+  }
+}
 
 export const fetchEvents = createAsyncThunk(
   'events/fetchEvents',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await api.get('/events')
-      // Normalize fields and map MongoDB _id to id for UI consistency
-      const events = (response.data.events || response.data || []).map(event => ({
-        ...event,
-        id: event._id || event.id,
-        name: event.title || event.name || '',
-        image: event.image || event.backgroundImage || ''
-      }))
-      return events
+      const { data, error } = await supabase
+        .from('events')
+        .select('*')
+        .order('date', { ascending: false, nullsFirst: false })
+
+      if (error) {
+        throw new Error(error.message || 'Failed to fetch events')
+      }
+
+      return (data || []).map(normalizeEvent)
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to fetch events')
+      return rejectWithValue(error.message || 'Failed to fetch events')
     }
   }
 )
@@ -24,63 +69,58 @@ export const createEvent = createAsyncThunk(
   'events/createEvent',
   async (eventData, { rejectWithValue }) => {
     try {
-      const token = localStorage.getItem('adminToken')
-      const response = await api.post('/events', eventData, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'multipart/form-data'
-        }
-      })
-      const event = response.data.event || response.data
-      return {
-        ...event,
-        id: event._id || event.id,
-        name: event.title || event.name || '',
-        image: event.image || event.backgroundImage || ''
+      const id = createId()
+      const payload = await buildEventPayload({ id, eventData })
+      const { data, error } = await supabase.from('events').insert(payload).select().single()
+
+      if (error) {
+        throw new Error(error.message || 'Failed to create event')
       }
+
+      return normalizeEvent(data)
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to create event')
+      return rejectWithValue(error.message || 'Failed to create event')
     }
   }
 )
 
 export const updateEvent = createAsyncThunk(
   'events/updateEvent',
-  async ({ id, eventData }, { rejectWithValue }) => {
+  async ({ id, eventData }, { rejectWithValue, getState }) => {
     try {
-      const token = localStorage.getItem('adminToken')
-      const response = await api.put(`/events/${id}`, eventData, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'multipart/form-data'
-        }
-      })
-      const event = response.data.event || response.data
-      return {
-        ...event,
-        id: event._id || event.id,
-        name: event.title || event.name || '',
-        image: event.image || event.backgroundImage || ''
+      const existingEvent = getState().events.events.find((event) => event.id === id)
+      const payload = await buildEventPayload({ id, eventData, existingEvent })
+      const { data, error } = await supabase.from('events').update(payload).eq('id', id).select().single()
+
+      if (error) {
+        throw new Error(error.message || 'Failed to update event')
       }
+
+      return normalizeEvent(data)
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to update event')
+      return rejectWithValue(error.message || 'Failed to update event')
     }
   }
 )
 
 export const deleteEvent = createAsyncThunk(
   'events/deleteEvent',
-  async (id, { rejectWithValue }) => {
+  async (id, { rejectWithValue, getState }) => {
     try {
-      const token = localStorage.getItem('adminToken')
-      await api.delete(`/events/${id}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      })
+      const existingEvent = getState().events.events.find((event) => event.id === id)
+      if (existingEvent?.image) {
+        await deletePublicFile({ bucket: 'events', publicUrl: existingEvent.image })
+      }
+
+      const { error } = await supabase.from('events').delete().eq('id', id)
+
+      if (error) {
+        throw new Error(error.message || 'Failed to delete event')
+      }
+
       return id
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to delete event')
+      return rejectWithValue(error.message || 'Failed to delete event')
     }
   }
 )

@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
-import api from '../config/api'
 import toast from 'react-hot-toast'
 import { useContactConfig } from '../hooks/useContactConfig'
+import { supabase } from '../lib/supabase'
 
 const Contact = () => {
   const { 
@@ -41,19 +41,24 @@ const Contact = () => {
     setSubmitStatus(null)
 
     try {
-      const response = await api.post('/contacts', formData)
-      
-      if (response.data.success) {
-        setSubmitStatus('success')
-        toast.success('Thank you! Your message has been sent successfully.')
-        setFormData({
-          name: '',
-          email: '',
-          phone: '',
-          subject: '',
-          message: ''
-        })
+      const { error } = await supabase.from('contacts').insert({
+        ...formData,
+        services: [],
+      })
+
+      if (error) {
+        throw error
       }
+
+      setSubmitStatus('success')
+      toast.success('Thank you! Your message has been sent successfully.')
+      setFormData({
+        name: '',
+        email: '',
+        phone: '',
+        subject: '',
+        message: ''
+      })
     } catch (error) {
       console.error('Contact form submission failed:', error)
       setSubmitStatus('error')

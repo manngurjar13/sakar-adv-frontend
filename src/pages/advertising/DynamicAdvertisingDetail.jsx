@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
-import { fetchServices } from '../../store/slices/servicesSlice'
+import { fetchAdvertising } from '../../store/slices/advertisingSlice'
 import { getImageUrl } from '../../utils/imageUtils'
 
 const featureCardVariants = {
@@ -21,33 +21,31 @@ const featureCardVariants = {
   }),
 }
 
-const DynamicServiceDetail = () => {
+const DynamicAdvertisingDetail = () => {
   const { slug } = useParams()
   const navigate = useNavigate()
   const dispatch = useDispatch()
-  
-  const { services, loading, error } = useSelector((state) => state.services)
-  
-  useEffect(() => {
-    if (services.length === 0) {
-      dispatch(fetchServices())
-    }
-  }, [dispatch, services.length])
+  const { advertising, loading, error } = useSelector((state) => state.advertising)
 
-  // Find service by slug or id
-  const service = services.find(
-    (s) => 
-      s._id === slug || 
-      s.service_name?.str1?.toLowerCase().replace(/\s+/g, '-') === slug ||
-      s.service_name?.str1?.toLowerCase().replace(/\s+/g, '_') === slug
+  useEffect(() => {
+    if (advertising.length === 0) {
+      dispatch(fetchAdvertising())
+    }
+  }, [dispatch, advertising.length])
+
+  const advertisingItem = advertising.find(
+    (item) =>
+      item._id === slug ||
+      item.advertising_name?.str1?.toLowerCase().replace(/\s+/g, '-') === slug ||
+      item.advertising_name?.str1?.toLowerCase().replace(/\s+/g, '_') === slug
   )
 
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="flex flex-col items-center">
-          <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
-          <p className="mt-4 text-gray-600">Loading service details...</p>
+          <div className="w-12 h-12 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin"></div>
+          <p className="mt-4 text-gray-600">Loading advertising details...</p>
         </div>
       </div>
     )
@@ -57,93 +55,90 @@ const DynamicServiceDetail = () => {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-red-600 mb-4">Error loading service: {error}</p>
+          <p className="text-red-600 mb-4">Error loading advertising: {error}</p>
           <button
-            onClick={() => navigate('/services')}
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
+            onClick={() => navigate('/advertising')}
+            className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700"
           >
-            Back to Services
+            Back to Advertising
           </button>
         </div>
       </div>
     )
   }
 
-  if (!service) {
+  if (!advertisingItem) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-gray-600 mb-4">Service not found</p>
+          <p className="text-gray-600 mb-4">Advertising item not found</p>
           <button
-            onClick={() => navigate('/services')}
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
+            onClick={() => navigate('/advertising')}
+            className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700"
           >
-            Back to Services
+            Back to Advertising
           </button>
         </div>
       </div>
     )
   }
 
-  const serviceTitle = service.service_name?.str1 || 'Service'
-  const serviceSubtitle = service.service_name?.str2 || ''
-  const description = service.description || ''
-  const categoryName = service.category || 'Service'
-  const featureList = service.feature || service.features || []
-  const featureTitle1 = service.feature_heading?.str1 || 'Why Choose Our'
-  const featureTitle2 = service.feature_heading?.str2 || serviceTitle
+  const advertisingTitle = advertisingItem.advertising_name?.str1 || 'Advertising'
+  const advertisingSubtitle = advertisingItem.advertising_name?.str2 || ''
+  const description = advertisingItem.description || ''
+  const categoryName = advertisingItem.category || 'Advertising'
+  const featureList = advertisingItem.feature || advertisingItem.features || []
+  const featureTitle1 = advertisingItem.feature_heading?.str1 || 'Why Choose'
+  const featureTitle2 = advertisingItem.feature_heading?.str2 || advertisingTitle
   const featureDescription =
-    service.feature_description ||
-    'Professional service delivery that brings maximum impact and value to your business.'
+    advertisingItem.feature_description ||
+    'Powerful advertising solutions designed to maximize visibility, engagement, and campaign recall.'
   const imageUrl =
-    getImageUrl(service.image) ||
-    'https://images.unsplash.com/photo-1553531088-d5b11e10e979?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80'
+    getImageUrl(advertisingItem.image) ||
+    'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80'
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Hero Section with Background Image */}
-      <section 
+      <section
         className="relative py-24 sm:py-32 overflow-hidden"
         style={{
           backgroundImage: `url(${imageUrl})`,
-          backgroundColor: '#1e40af',
+          backgroundColor: '#7c3aed',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat'
+          backgroundRepeat: 'no-repeat',
         }}
       >
-        {/* Dark overlay for better text readability */}
-        <div className="absolute inset-0 bg-black/50"></div>
-        
+        <div className="absolute inset-0 bg-black/55"></div>
+
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center max-w-4xl mx-auto">
             <div className="inline-block mb-6">
               <span className="bg-white/20 text-white px-4 py-2 sm:px-6 sm:py-3 rounded-full text-sm sm:text-base md:text-lg font-semibold backdrop-blur-sm flex items-center justify-center">
                 <svg className="w-4 h-4 sm:w-5 sm:h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5h2m-1 0v14m8-7H4" />
                 </svg>
                 {categoryName}
               </span>
             </div>
             <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white mb-6 sm:mb-8 leading-tight">
-              {serviceTitle}
-              {serviceSubtitle && <span className="block text-orange-300">{serviceSubtitle}</span>}
+              {advertisingTitle}
+              {advertisingSubtitle && <span className="block text-fuchsia-200">{advertisingSubtitle}</span>}
             </h1>
-            <p className="text-blue-100 text-base sm:text-lg md:text-xl mb-8 sm:mb-10 leading-relaxed max-w-3xl mx-auto">
+            <p className="text-purple-100 text-base sm:text-lg md:text-xl mb-8 sm:mb-10 leading-relaxed max-w-3xl mx-auto">
               {description}
             </p>
           </div>
         </div>
       </section>
 
-      {/* Features Section */}
       {featureList.length > 0 && (
         <section className="py-16 sm:py-20 bg-white">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-12 sm:mb-16">
               <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-6">
                 {featureTitle1}
-                <span className="bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent"> {featureTitle2}</span>
+                <span className="bg-gradient-to-r from-purple-600 to-fuchsia-500 bg-clip-text text-transparent"> {featureTitle2}</span>
               </h2>
               <p className="text-lg text-gray-600 max-w-3xl mx-auto">
                 {featureDescription}
@@ -167,10 +162,10 @@ const DynamicServiceDetail = () => {
                     style={{
                       backgroundImage: feature.image
                         ? `url(${getImageUrl(feature.image)})`
-                        : 'linear-gradient(135deg, rgba(37,99,235,0.95), rgba(15,23,42,0.92))',
+                        : 'linear-gradient(135deg, rgba(147,51,234,0.95), rgba(88,28,135,0.92))',
                     }}
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/75 via-slate-950/20 to-transparent transition-all duration-500 group-hover:from-slate-950/65" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/20 to-transparent transition-all duration-500 group-hover:from-slate-950/65" />
 
                   <div className="relative z-10 flex h-full flex-col justify-end p-8">
                     <motion.div
@@ -179,16 +174,16 @@ const DynamicServiceDetail = () => {
                       className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl border border-white/20 bg-white/15 shadow-lg backdrop-blur-md"
                     >
                       <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                       </svg>
                     </motion.div>
 
                     <div className="max-w-sm rounded-2xl border border-white/10 bg-slate-950/30 p-5 shadow-xl backdrop-blur-md">
                       <h3 className="mb-4 text-2xl font-bold text-white drop-shadow-sm">
-                        {feature.title || feature.feature_heading?.str1 || `Feature ${index + 1}`}
+                        {feature.title || `Feature ${index + 1}`}
                       </h3>
                       <p className="text-sm leading-relaxed text-white/85">
-                        {feature.description || feature.feature_heading?.str2 || 'Professional service with quality assurance'}
+                        {feature.description || 'Premium campaign support with attention-grabbing delivery.'}
                       </p>
                     </div>
                   </div>
@@ -199,26 +194,25 @@ const DynamicServiceDetail = () => {
         </section>
       )}
 
-      {/* Benefits Section */}
-      <section className="py-16 sm:py-20 bg-gradient-to-br from-gray-50 to-gray-100">
+      <section className="py-16 sm:py-20 bg-gradient-to-br from-gray-50 to-purple-50">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12 sm:mb-16">
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-6">
-              Service Benefits
+              Campaign Benefits
             </h2>
             <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-              Get the most out of our professional services with proven results and dedication.
+              Designed to keep your brand visible, memorable, and high-converting across every touchpoint.
             </p>
           </div>
 
           <div className="grid sm:grid-cols-2 gap-8">
             {[
-              { title: 'Professional Quality', description: 'High-quality service delivery with attention to detail' },
-              { title: 'Cost Effective', description: 'Competitive pricing without compromising quality' },
-              { title: 'Fast Turnaround', description: 'Quick execution while maintaining excellence' },
-              { title: 'Custom Solutions', description: 'Tailored services to meet your specific needs' }
+              { title: 'Maximum Visibility', description: 'Prominent placements and clear creative execution for stronger awareness.' },
+              { title: 'Targeted Reach', description: 'Campaign formats tailored for the audiences and locations that matter most.' },
+              { title: 'Premium Presentation', description: 'High-quality visuals and finishes that strengthen brand perception.' },
+              { title: 'Flexible Execution', description: 'Adaptable campaign structures for launches, activations, and long-term visibility.' },
             ].map((benefit, index) => (
-              <div key={index} className="bg-white rounded-xl shadow-lg p-8 border-l-4 border-blue-600">
+              <div key={index} className="bg-white rounded-xl shadow-lg p-8 border-l-4 border-purple-600">
                 <h3 className="text-xl font-bold text-gray-900 mb-3">{benefit.title}</h3>
                 <p className="text-gray-600">{benefit.description}</p>
               </div>
@@ -227,24 +221,23 @@ const DynamicServiceDetail = () => {
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="bg-blue-600 text-white py-16">
+      <section className="bg-purple-600 text-white py-16">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-            Ready to Get Started?
+            Ready to Launch This Campaign?
           </h2>
           <p className="text-xl mb-8 max-w-2xl mx-auto">
-            Contact us today to discuss your needs and get a customized solution for your {serviceTitle} requirements.
+            Contact us to plan, price, and execute your {advertisingTitle} campaign with the right creative and placement mix.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button className="bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
+            <button className="bg-white text-purple-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
               Contact Us
             </button>
-            <button 
-              onClick={() => navigate('/services')}
-              className="border-2 border-white text-white px-8 py-3 rounded-lg font-semibold hover:bg-white hover:text-blue-600 transition-colors"
+            <button
+              onClick={() => navigate('/advertising')}
+              className="border-2 border-white text-white px-8 py-3 rounded-lg font-semibold hover:bg-white hover:text-purple-600 transition-colors"
             >
-              Back to Services
+              Back to Advertising
             </button>
           </div>
         </div>
@@ -253,4 +246,4 @@ const DynamicServiceDetail = () => {
   )
 }
 
-export default DynamicServiceDetail
+export default DynamicAdvertisingDetail
