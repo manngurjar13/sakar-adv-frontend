@@ -9,7 +9,9 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim() || ''
 const isSupabaseConfigMissing = !supabaseUrl || !supabaseAnonKey
 
 if (isSupabaseConfigMissing) {
-  console.warn('Supabase environment variables are missing. Check VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.')
+  console.error(
+    'Supabase environment variables are missing. Check VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your build environment.'
+  )
 }
 
 export const supabase = isSupabaseConfigMissing
@@ -21,5 +23,14 @@ export const supabase = isSupabaseConfigMissing
         detectSessionInUrl: true,
       },
     })
+
+export const getSupabase = () => {
+  if (!supabase) {
+    throw new Error(
+      'Supabase client is not initialized. Check VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your production environment.'
+    )
+  }
+  return supabase
+}
 
 export { normalizeSupabaseUrl }

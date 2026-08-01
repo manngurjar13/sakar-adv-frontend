@@ -1,6 +1,6 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
 import { createId, ensureArray } from '../../lib/supabaseData'
-import { supabase } from '../../lib/supabase'
+import { getSupabase } from '../../lib/supabase'
 import { deletePublicFile, uploadPublicFile } from '../../lib/supabaseStorage'
 
 const normalizeService = (service) => {
@@ -85,6 +85,7 @@ const buildServicePayload = async ({ id, serviceData, existingService = null }) 
 
 export const fetchServices = createAsyncThunk('services/fetchServices', async (_, { rejectWithValue }) => {
   try {
+    const supabase = getSupabase()
     const { data, error } = await supabase
       .from('services')
       .select('*')

@@ -1,6 +1,6 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
 import { createId, ensureArray } from '../../lib/supabaseData'
-import { supabase } from '../../lib/supabase'
+import { getSupabase } from '../../lib/supabase'
 import { deletePublicFile, uploadPublicFile } from '../../lib/supabaseStorage'
 
 const normalizeAdvertising = (advertising) => {
@@ -88,6 +88,7 @@ const buildAdvertisingPayload = async ({ id, advertisingData, existingAdvertisin
 
 export const fetchAdvertising = createAsyncThunk('advertising/fetchAdvertising', async (_, { rejectWithValue }) => {
   try {
+    const supabase = getSupabase()
     const { data, error } = await supabase
       .from('advertising')
       .select('*')

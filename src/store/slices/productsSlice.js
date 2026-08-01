@@ -1,6 +1,6 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
 import { createId, ensureArray } from '../../lib/supabaseData'
-import { supabase } from '../../lib/supabase'
+import { getSupabase } from '../../lib/supabase'
 import { deletePublicFile, uploadPublicFile } from '../../lib/supabaseStorage'
 
 const normalizeProduct = (product) => ({
@@ -42,6 +42,7 @@ const buildProductPayload = async ({ id, productData, existingProduct = null }) 
 
 export const fetchProducts = createAsyncThunk('products/fetchProducts', async (_, { rejectWithValue }) => {
   try {
+    const supabase = getSupabase()
     const { data, error } = await supabase
       .from('products')
       .select('*')
