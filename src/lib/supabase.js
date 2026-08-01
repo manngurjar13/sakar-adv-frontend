@@ -4,25 +4,26 @@ const normalizeSupabaseUrl = (url = '') => {
   return url.trim().replace(/\/rest\/v1\/?$/, '').replace(/\/$/, '')
 }
 
-const supabaseUrl = normalizeSupabaseUrl(import.meta.env.VITE_SUPABASE_URL)
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim() || ''
-const isSupabaseConfigMissing = !supabaseUrl || !supabaseAnonKey
+const fallbackSupabaseUrl = 'https://gvlvodrozbyoxbthxwbt.supabase.co'
+const fallbackSupabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd2bHZvZHJvemJ5b3hidGh4d2J0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ2MjU1ODcsImV4cCI6MjEwMDIwMTU4N30.LLxVfqsQpkrUIEr6_vdl2HwD2iCHjBDb7U2I-2CL42E'
 
-if (isSupabaseConfigMissing) {
-  console.error(
-    'Supabase environment variables are missing. Check VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your build environment.'
+const supabaseUrl = normalizeSupabaseUrl(import.meta.env.VITE_SUPABASE_URL || fallbackSupabaseUrl)
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim() || fallbackSupabaseAnonKey
+const isSupabaseEnvMissing = !import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY
+
+if (isSupabaseEnvMissing) {
+  console.warn(
+    'VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY is missing. Using fallback credentials for Supabase. Set production env variables to avoid using hardcoded values.'
   )
 }
 
-export const supabase = isSupabaseConfigMissing
-  ? null
-  : createClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-        detectSessionInUrl: true,
-      },
-    })
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+  },
+})
 
 export const getSupabase = () => {
   if (!supabase) {
