@@ -5,7 +5,6 @@ import { Swiper, SwiperSlide } from 'swiper/react'
 import { Navigation, Pagination, Autoplay } from 'swiper/modules'
 import EventCard from '../components/EventCard'
 import { fetchEvents } from '../store/slices/eventsSlice'
-import { fetchEventBanners } from '../store/slices/eventBannerSlice'
 import { fetchUpcomingEvents } from '../store/slices/upcomingEventSlice'
 import { getImageUrl } from '../utils/imageUtils'
 import { getEventCategoryLabel, getEventColorClass, slugifyEventTitle } from '../lib/eventCategories'
@@ -13,18 +12,39 @@ import 'swiper/css'
 import 'swiper/css/navigation'
 import 'swiper/css/pagination'
 
+const EVENT_CAROUSEL_SLIDES = [
+  {
+    id: 'concert',
+    bannerImage: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80',
+    cardText: 'Maximize Your Reach',
+  },
+  {
+    id: 'campaign',
+    bannerImage: 'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80',
+    cardText: 'Complete Advertising Solutions',
+  },
+  {
+    id: 'conference',
+    bannerImage: 'https://images.unsplash.com/photo-1511578314322-379afb476865?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80',
+    cardText: 'Complete Event Setup',
+  },
+  {
+    id: 'stage',
+    bannerImage: 'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80',
+    cardText: 'Live Event Experiences',
+  },
+]
+
 const Events = () => {
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const categoryScrollRef = useRef(null)
   const { events, loading: eventsLoading, error: eventsError } = useSelector((state) => state.events)
-  const { banners, loading: bannersLoading } = useSelector((state) => state.eventBanners)
   const { events: upcomingEvents, loading: upcomingLoading } = useSelector((state) => state.upcomingEvents)
   const [selectedCategory, setSelectedCategory] = useState('')
 
   useEffect(() => {
     dispatch(fetchEvents())
-    dispatch(fetchEventBanners())
     dispatch(fetchUpcomingEvents())
   }, [dispatch])
 
@@ -32,7 +52,7 @@ const Events = () => {
     () => (events || []).filter((event) => Boolean(event.title || event.name)),
     [events]
   )
-  const displayBanners = banners || []
+  const displayBanners = EVENT_CAROUSEL_SLIDES
   const displayUpcomingEvents = upcomingEvents || []
 
   const eventCategories = useMemo(() => {
@@ -89,71 +109,25 @@ const Events = () => {
             disableOnInteraction: false,
           }}
           loop={displayBanners.length > 1}
-          className="banner-swiper h-full"
+          className="banner-swiper h-full w-full"
         >
-          {bannersLoading ? (
-            <SwiperSlide>
-              <div className="relative h-[60vh] sm:h-[70vh] bg-gray-200 flex items-center justify-center">
-                <div className="text-center">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                  <p className="text-gray-600">Loading banners...</p>
-                </div>
-              </div>
-            </SwiperSlide>
-          ) : displayBanners.length > 0 ? (
-            displayBanners.map((banner) => (
-              <SwiperSlide key={banner.id}>
-                <div className="relative h-[60vh] sm:h-[70vh]">
-                  <div className="absolute inset-0 overflow-hidden">
-                    <img
-                      src={getImageUrl(banner.bannerImage)}
-                      alt={banner.cardText || 'Event banner'}
-                      className="h-full w-full object-cover object-center scale-125 blur-2xl"
-                    />
-                  </div>
-                  <div className="absolute inset-0 overflow-hidden">
-                    <img
-                      src={getImageUrl(banner.bannerImage)}
-                      alt={banner.cardText || 'Event banner'}
-                      className="h-full w-full object-cover object-center scale-110"
-                    />
-                  </div>
-                  <div className="absolute inset-0 bg-black/55"></div>
-
-                  <div className="absolute inset-0 pointer-events-none">
-                    <div className="absolute top-8 left-8 w-16 h-32 opacity-30">
-                      <div className="w-full h-2 bg-white mb-2"></div>
-                      <div className="w-full h-2 bg-white mb-2"></div>
-                      <div className="w-full h-2 bg-white mb-2"></div>
-                      <div className="w-full h-2 bg-white mb-2"></div>
-                    </div>
-                    <div className="absolute top-20 left-1/4 w-0 h-0 border-l-[50px] border-r-[50px] border-b-[80px] border-l-transparent border-r-transparent border-b-red-500 opacity-60"></div>
-                    <div className="absolute top-40 left-1/3 w-0 h-0 border-l-[40px] border-r-[40px] border-b-[60px] border-l-transparent border-r-transparent border-b-blue-500 opacity-60"></div>
-                    <div className="absolute top-32 right-1/4 w-32 h-4 bg-orange-500 transform rotate-45 opacity-60"></div>
-                  </div>
-
-                  <div className="relative z-10 flex items-center h-full px-4">
-                    <div className="max-w-2xl ml-4 sm:ml-8 lg:ml-16 xl:ml-32">
-                      <div className="bg-white/20 backdrop-blur-md rounded-2xl sm:rounded-3xl p-6 sm:p-8 lg:p-10 shadow-2xl border border-white/30">
-                        <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold text-white mb-4 sm:mb-6 leading-tight">
-                          <span className="font-elegant">{banner.cardText || 'Event Banner'}</span>
-                        </h1>
-                      </div>
+          {displayBanners.map((banner) => (
+              <SwiperSlide key={banner.id} className="!h-full">
+                <div className="relative h-full w-full">
+                  <div
+                    className="absolute inset-0 bg-cover bg-center"
+                    style={{ backgroundImage: `url('${banner.bannerImage}')` }}
+                  />
+                  <div className="relative z-10 flex items-end h-full px-4 pb-16 sm:pb-20">
+                    <div className="max-w-3xl ml-4 sm:ml-8 lg:ml-16 xl:ml-32">
+                      <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold text-white leading-tight drop-shadow-[0_2px_8px_rgba(0,0,0,0.65)]">
+                        <span className="font-elegant">{banner.cardText || 'Event Banner'}</span>
+                      </h1>
                     </div>
                   </div>
                 </div>
               </SwiperSlide>
-            ))
-          ) : (
-            <SwiperSlide>
-              <div className="relative h-[60vh] sm:h-[70vh] bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 flex items-center justify-center">
-                <div className="text-center text-white">
-                  <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-4">Our Events</h1>
-                  <p className="text-xl text-blue-100">Discover amazing events and experiences</p>
-                </div>
-              </div>
-            </SwiperSlide>
-          )}
+          ))}
         </Swiper>
 
         <button className="swiper-button-prev-banner absolute left-4 bottom-4 sm:left-4 sm:bottom-6 md:left-6 md:bottom-8 lg:left-8 lg:top-1/2 lg:-translate-y-1/2 lg:bottom-auto z-30 w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-16 lg:h-16 xl:w-20 xl:h-20 rounded-full flex items-center justify-center bg-white/95 backdrop-blur-sm shadow-2xl text-gray-800 hover:bg-yellow-300 hover:text-gray-900 hover:scale-110 active:scale-95 transition-all duration-300 cursor-pointer border-2 border-white/80 hover:border-yellow-400">
@@ -470,8 +444,10 @@ const Events = () => {
       <style jsx>{`
         @import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Poppins:wght@300;400;500;600;700&display=swap');
 
+        .banner-swiper,
+        .banner-swiper .swiper-wrapper,
         .banner-swiper .swiper-slide {
-          height: 70vh;
+          height: 100%;
         }
 
         .swiper-button-prev-banner:after,

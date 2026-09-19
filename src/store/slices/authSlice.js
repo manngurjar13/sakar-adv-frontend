@@ -27,26 +27,29 @@ const getAdminProfile = async (user) => {
   }
 }
 
+const isAborted = (action) =>
+  Boolean(action.meta?.aborted) || action.error?.name === 'AbortError'
+
 export const loginAdmin = createAsyncThunk(
   'auth/loginAdmin',
   async ({ email, password }, { rejectWithValue }) => {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
+
+    if (error) {
+      return rejectWithValue(error.message || 'Login failed')
+    }
+
+    const session = data.session
+    const user = data.user
+
+    if (!session || !user) {
+      return rejectWithValue('Login failed')
+    }
+
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      })
-
-      if (error) {
-        throw new Error(error.message || 'Login failed')
-      }
-
-      const session = data.session
-      const user = data.user
-
-      if (!session || !user) {
-        throw new Error('Login failed')
-      }
-
       const admin = await getAdminProfile(user)
       localAuthCleanup()
 
@@ -54,9 +57,10 @@ export const loginAdmin = createAsyncThunk(
         token: session.access_token,
         admin,
       }
-    } catch (error) {
+    } catch (profileError) {
       await supabase.auth.signOut()
-      return rejectWithValue(error.message || 'Login failed')
+      localAuthCleanup()
+      return rejectWithValue(profileError.message || 'Login failed')
     }
   }
 )
@@ -82,9 +86,13 @@ export const logoutAdmin = createAsyncThunk(
 
 export const checkAuthStatus = createAsyncThunk(
   'auth/checkAuthStatus',
-  async (_, { rejectWithValue }) => {
+  async (_, { rejectWithValue, signal }) => {
     try {
       const { data, error } = await supabase.auth.getSession()
+
+      if (signal.aborted) {
+        return rejectWithValue('aborted')
+      }
 
       if (error) {
         throw new Error(error.message || 'Auth check failed')
@@ -98,12 +106,21 @@ export const checkAuthStatus = createAsyncThunk(
 
       const admin = await getAdminProfile(session.user)
 
+      if (signal.aborted) {
+        return rejectWithValue('aborted')
+      }
+
       return {
         token: session.access_token,
         admin,
       }
     } catch (error) {
       localAuthCleanup()
+      try {
+        await supabase.auth.signOut()
+      } catch {
+        // Session cleanup is best-effort during an auth check failure.
+      }
       return rejectWithValue(error.message || 'Auth check failed')
     }
   }
@@ -116,6 +133,7 @@ const initialState = {
   loading: false,
   error: null,
   initialized: false,
+  currentCheckId: null,
 }
 
 const authSlice = createSlice({
@@ -128,10 +146,11 @@ const authSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // Login cases
       .addCase(loginAdmin.pending, (state) => {
         state.loading = true
         state.error = null
+        // Ignore any in-flight session check so it cannot wipe a successful login.
+        state.currentCheckId = null
       })
       .addCase(loginAdmin.fulfilled, (state, action) => {
         state.loading = false
@@ -149,20 +168,37 @@ const authSlice = createSlice({
         state.error = action.payload
         state.initialized = true
       })
-      // Logout cases
       .addCase(logoutAdmin.fulfilled, (state) => {
         state.isAuthenticated = false
         state.admin = null
         state.token = null
         state.error = null
-        state.initialized = true
-      })
-      .addCase(checkAuthStatus.pending, (state) => {
-        state.loading = true
-      })
-      // Check auth status cases
-      .addCase(checkAuthStatus.fulfilled, (state, action) => {
         state.loading = false
+        state.initialized = true
+        state.currentCheckId = null
+      })
+      .addCase(logoutAdmin.rejected, (state) => {
+        state.isAuthenticated = false
+        state.admin = null
+        state.token = null
+        state.loading = false
+        state.initialized = true
+        state.currentCheckId = null
+      })
+      .addCase(checkAuthStatus.pending, (state, action) => {
+        state.loading = true
+        state.currentCheckId = action.meta.requestId
+      })
+      .addCase(checkAuthStatus.fulfilled, (state, action) => {
+        if (action.meta.requestId !== state.currentCheckId) {
+          return
+        }
+
+        state.loading = false
+        state.currentCheckId = null
+        state.initialized = true
+        state.error = null
+
         if (action.payload) {
           state.isAuthenticated = true
           state.admin = action.payload.admin
@@ -172,15 +208,27 @@ const authSlice = createSlice({
           state.admin = null
           state.token = null
         }
-        state.initialized = true
       })
       .addCase(checkAuthStatus.rejected, (state, action) => {
+        if (isAborted(action) || action.payload === 'aborted') {
+          if (action.meta.requestId === state.currentCheckId) {
+            state.loading = false
+            state.currentCheckId = null
+          }
+          return
+        }
+
+        if (action.meta.requestId !== state.currentCheckId) {
+          return
+        }
+
         state.loading = false
         state.isAuthenticated = false
         state.admin = null
         state.token = null
-        state.error = action.payload
+        state.error = null
         state.initialized = true
+        state.currentCheckId = null
       })
   },
 })

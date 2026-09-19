@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate, Link } from 'react-router-dom'
 import { Formik, Form, Field } from 'formik'
@@ -10,20 +10,30 @@ import toast from 'react-hot-toast'
 const AdminLogin = () => {
   const dispatch = useDispatch()
   const navigate = useNavigate()
-  const { isAuthenticated, loading, error } = useSelector((state) => state.auth)
+  const { isAuthenticated, loading, error, initialized } = useSelector((state) => state.auth)
   const [showPassword, setShowPassword] = useState(false)
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/admin/events')
-    }
-  }, [isAuthenticated, navigate])
+  const checkPromiseRef = useRef(null)
+  const didCheckRef = useRef(false)
 
   useEffect(() => {
     dispatch(clearError())
-    // Check if user is already authenticated on component mount
-    dispatch(checkAuthStatus())
-  }, [dispatch])
+    if (initialized || didCheckRef.current) {
+      return
+    }
+
+    didCheckRef.current = true
+    const promise = dispatch(checkAuthStatus())
+    checkPromiseRef.current = promise
+    return () => {
+      promise.abort()
+    }
+  }, [dispatch, initialized])
+
+  useEffect(() => {
+    if (initialized && isAuthenticated) {
+      navigate('/admin/events')
+    }
+  }, [initialized, isAuthenticated, navigate])
 
   const validationSchema = Yup.object({
     email: Yup.string()
@@ -36,12 +46,17 @@ const AdminLogin = () => {
 
   const handleSubmit = async (values, { setSubmitting }) => {
     try {
+      checkPromiseRef.current?.abort()
       await dispatch(loginAdmin(values)).unwrap()
       toast.success('Logged in successfully!')
       navigate('/admin/events')
     } catch (error) {
       console.error('Login failed:', error)
-      toast.error(error?.message || 'Login failed. Please check your credentials.')
+      const message =
+        typeof error === 'string'
+          ? error
+          : error?.message || 'Login failed. Please check your credentials.'
+      toast.error(message)
     } finally {
       setSubmitting(false)
     }
@@ -69,6 +84,12 @@ const AdminLogin = () => {
 
         {/* Login Form */}
         <div className="bg-white/10 backdrop-blur-md rounded-xl shadow-xl p-8 border border-white/20">
+          {!initialized ? (
+            <div className="flex flex-col items-center justify-center py-10">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+              <p className="mt-4 text-sm text-blue-100">Checking session...</p>
+            </div>
+          ) : (
           <Formik
             initialValues={{
               email: '',
@@ -153,6 +174,7 @@ const AdminLogin = () => {
               </Form>
             )}
           </Formik>
+          )}
         </div>
 
         {/* Footer */}

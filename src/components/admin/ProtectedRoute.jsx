@@ -7,15 +7,18 @@ import { checkAuthStatus } from '../../store/slices/authSlice'
 const ProtectedRoute = ({ children }) => {
   const dispatch = useDispatch()
   const location = useLocation()
-  const { isAuthenticated, initialized, loading } = useSelector((state) => state.auth)
+  const { isAuthenticated, initialized } = useSelector((state) => state.auth)
 
   useEffect(() => {
     if (!initialized) {
-      dispatch(checkAuthStatus())
+      const promise = dispatch(checkAuthStatus())
+      return () => {
+        promise.abort()
+      }
     }
   }, [dispatch, initialized])
 
-  if (!initialized || loading) {
+  if (!initialized) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>

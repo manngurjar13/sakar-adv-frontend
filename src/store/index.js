@@ -1,7 +1,6 @@
-import { configureStore } from '@reduxjs/toolkit'
-import { persistStore, persistReducer } from 'redux-persist'
+import { configureStore, combineReducers } from '@reduxjs/toolkit'
+import { persistStore, persistReducer, createTransform, FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER } from 'redux-persist'
 import storage from 'redux-persist/lib/storage'
-import { combineReducers } from '@reduxjs/toolkit'
 import authSlice from './slices/authSlice'
 import productsSlice from './slices/productsSlice'
 import eventsSlice from './slices/eventsSlice'
@@ -14,11 +13,29 @@ import upcomingEventSlice from './slices/upcomingEventSlice'
 import servicesSlice from './slices/servicesSlice'
 import advertisingSlice from './slices/advertisingSlice'
 
-// Persist configuration for auth slice only
+const authPersistTransform = createTransform(
+  (inboundState) => ({
+    isAuthenticated: inboundState.isAuthenticated,
+    admin: inboundState.admin,
+    token: inboundState.token,
+  }),
+  (outboundState) => ({
+    isAuthenticated: outboundState.isAuthenticated || false,
+    admin: outboundState.admin || null,
+    token: outboundState.token || null,
+    loading: false,
+    error: null,
+    initialized: false,
+    currentCheckId: null,
+  }),
+  { whitelist: ['auth'] }
+)
+
 const persistConfig = {
   key: 'root',
   storage,
-  whitelist: ['auth'] // Only persist auth slice
+  whitelist: ['auth'],
+  transforms: [authPersistTransform],
 }
 
 const rootReducer = combineReducers({
@@ -42,7 +59,7 @@ export const store = configureStore({
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
       serializableCheck: {
-        ignoredActions: ['persist/PERSIST', 'persist/REHYDRATE'],
+        ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
       },
     }),
 })
