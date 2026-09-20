@@ -103,6 +103,7 @@ export const fetchServices = createAsyncThunk('services/fetchServices', async (_
 
 export const createService = createAsyncThunk('services/createService', async (serviceData, { rejectWithValue }) => {
   try {
+    const supabase = getSupabase()
     const id = createId()
     const payload = await buildServicePayload({ id, serviceData })
     const { data, error } = await supabase.from('services').insert(payload).select().single()
@@ -121,6 +122,7 @@ export const updateService = createAsyncThunk(
   'services/updateService',
   async ({ id, serviceData }, { rejectWithValue, getState }) => {
     try {
+      const supabase = getSupabase()
       const existingService = getState().services.services.find((service) => service.id === id || service._id === id)
       const payload = await buildServicePayload({ id, serviceData, existingService })
       const { data, error } = await supabase.from('services').update(payload).eq('id', id).select().single()
@@ -138,6 +140,7 @@ export const updateService = createAsyncThunk(
 
 export const deleteService = createAsyncThunk('services/deleteService', async (id, { rejectWithValue, getState }) => {
   try {
+    const supabase = getSupabase()
     const existingService = getState().services.services.find((service) => service.id === id || service._id === id)
 
     if (existingService?.image) {

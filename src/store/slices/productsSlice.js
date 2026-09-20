@@ -60,6 +60,7 @@ export const fetchProducts = createAsyncThunk('products/fetchProducts', async (_
 
 export const createProduct = createAsyncThunk('products/createProduct', async (productData, { rejectWithValue }) => {
   try {
+    const supabase = getSupabase()
     const id = createId()
     const payload = await buildProductPayload({ id, productData })
     const { data, error } = await supabase.from('products').insert(payload).select().single()
@@ -78,6 +79,7 @@ export const updateProduct = createAsyncThunk(
   'products/updateProduct',
   async ({ id, productData }, { rejectWithValue, getState }) => {
     try {
+      const supabase = getSupabase()
       const existingProduct = getState().products.products.find((product) => product.id === id || product._id === id)
       const payload = await buildProductPayload({ id, productData, existingProduct })
       const { data, error } = await supabase.from('products').update(payload).eq('id', id).select().single()
@@ -95,6 +97,7 @@ export const updateProduct = createAsyncThunk(
 
 export const deleteProduct = createAsyncThunk('products/deleteProduct', async (id, { rejectWithValue, getState }) => {
   try {
+    const supabase = getSupabase()
     const existingProduct = getState().products.products.find((product) => product.id === id || product._id === id)
 
     if (existingProduct?.image) {

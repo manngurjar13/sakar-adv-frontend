@@ -108,6 +108,7 @@ export const createAdvertising = createAsyncThunk(
   'advertising/createAdvertising',
   async (advertisingData, { rejectWithValue }) => {
     try {
+      const supabase = getSupabase()
       const id = createId()
       const payload = await buildAdvertisingPayload({ id, advertisingData })
       const { data, error } = await supabase.from('advertising').insert(payload).select().single()
@@ -127,6 +128,7 @@ export const updateAdvertising = createAsyncThunk(
   'advertising/updateAdvertising',
   async ({ id, advertisingData }, { rejectWithValue, getState }) => {
     try {
+      const supabase = getSupabase()
       const existingAdvertising = getState().advertising.advertising.find((item) => item.id === id || item._id === id)
       const payload = await buildAdvertisingPayload({ id, advertisingData, existingAdvertising })
       const { data, error } = await supabase.from('advertising').update(payload).eq('id', id).select().single()
@@ -146,6 +148,7 @@ export const deleteAdvertising = createAsyncThunk(
   'advertising/deleteAdvertising',
   async (id, { rejectWithValue, getState }) => {
     try {
+      const supabase = getSupabase()
       const existingAdvertising = getState().advertising.advertising.find((item) => item.id === id || item._id === id)
 
       if (existingAdvertising?.image) {

@@ -45,80 +45,88 @@ const Testimonials = () => {
         </div>
 
         {/* Testimonials Carousel */}
-        <div className="relative">
+        <div>
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
               <span className="ml-3 text-gray-600">Loading testimonials...</span>
             </div>
           ) : (
-            <Swiper
-            modules={[Navigation, Pagination, Autoplay]}
-            spaceBetween={24}
-            slidesPerView={1}
-            breakpoints={{
-              640: {
-                slidesPerView: 2,
-                spaceBetween: 24,
-              },
-              1024: {
-                slidesPerView: 4,
-                spaceBetween: 24,
-              },
-            }}
-            navigation={{
-              nextEl: '.testimonials-swiper-button-next',
-              prevEl: '.testimonials-swiper-button-prev',
-            }}
-            pagination={{
-              el: '.testimonials-swiper-pagination',
-              clickable: true,
-            }}
-            autoplay={{
-              delay: 4000,
-              disableOnInteraction: false,
-            }}
-            loop={true}
-            className="testimonials-swiper"
-          >
-            {displayTestimonials.map((testimonial, index) => (
-              <SwiperSlide key={testimonial.id}>
-                <div className="bg-white p-6 rounded-xl shadow-lg border-2 border-gray-200 transition-all duration-300 hover:shadow-xl hover:border-blue-200">
-                  {/* Name */}
-                  <div className="mb-4">
-                    <h3 className="font-bold text-gray-900 text-sm sm:text-base">
-                      {testimonial.name || testimonial.customerName}
-                    </h3>
-                  </div>
+            <div className="flex items-center gap-3 sm:gap-4">
+              <button
+                type="button"
+                aria-label="Previous testimonial"
+                className="testimonials-swiper-button-prev shrink-0 w-10 h-10 bg-blue-600 rounded-full shadow-lg flex items-center justify-center text-white hover:bg-blue-700 hover:shadow-xl transition-all duration-300 cursor-pointer"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
 
-                  {/* Rating */}
-                  <div className="flex items-center mb-4">
-                    {renderStars(testimonial.rating)}
-                  </div>
+              <div className="min-w-0 flex-1">
+                <Swiper
+                  modules={[Navigation, Pagination, Autoplay]}
+                  spaceBetween={24}
+                  slidesPerView={1}
+                  breakpoints={{
+                    640: {
+                      slidesPerView: 2,
+                      spaceBetween: 24,
+                    },
+                    1024: {
+                      slidesPerView: 4,
+                      spaceBetween: 24,
+                    },
+                  }}
+                  navigation={{
+                    nextEl: '.testimonials-swiper-button-next',
+                    prevEl: '.testimonials-swiper-button-prev',
+                  }}
+                  pagination={{
+                    el: '.testimonials-swiper-pagination',
+                    clickable: true,
+                  }}
+                  autoplay={{
+                    delay: 4000,
+                    disableOnInteraction: false,
+                  }}
+                  loop={displayTestimonials.length > 1}
+                  className="testimonials-swiper"
+                >
+                  {displayTestimonials.map((testimonial) => (
+                    <SwiperSlide key={testimonial.id}>
+                      <div className="bg-white p-6 rounded-xl shadow-lg border-2 border-gray-200 transition-all duration-300 hover:shadow-xl hover:border-blue-200">
+                        <div className="mb-4">
+                          <h3 className="font-bold text-gray-900 text-sm sm:text-base">
+                            {testimonial.name || testimonial.customerName}
+                          </h3>
+                        </div>
 
-                  {/* Testimonial Text */}
-                  <p className="text-gray-700 text-sm leading-relaxed">
-                    {testimonial.text || testimonial.testimonial || testimonial.description}
-                  </p>
-                </div>
-              </SwiperSlide>
-            ))}
-          </Swiper>
+                        <div className="flex items-center mb-4">
+                          {renderStars(testimonial.rating)}
+                        </div>
+
+                        <p className="text-gray-700 text-sm leading-relaxed">
+                          {testimonial.text || testimonial.testimonial || testimonial.description}
+                        </p>
+                      </div>
+                    </SwiperSlide>
+                  ))}
+                </Swiper>
+              </div>
+
+              <button
+                type="button"
+                aria-label="Next testimonial"
+                className="testimonials-swiper-button-next shrink-0 w-10 h-10 bg-blue-600 rounded-full shadow-lg flex items-center justify-center text-white hover:bg-blue-700 hover:shadow-xl transition-all duration-300 cursor-pointer"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
           )}
 
-          {/* Navigation Buttons */}
-          <div className="testimonials-swiper-button-prev absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 w-10 h-10 bg-blue-600 rounded-full shadow-lg flex items-center justify-center text-white hover:bg-blue-700 hover:shadow-xl transition-all duration-300 cursor-pointer">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </div>
-          <div className="testimonials-swiper-button-next absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 w-10 h-10 bg-blue-600 rounded-full shadow-lg flex items-center justify-center text-white hover:bg-blue-700 hover:shadow-xl transition-all duration-300 cursor-pointer">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </div>
-
-          {/* Pagination */}
           <div className="testimonials-swiper-pagination flex justify-center mt-8"></div>
         </div>
 
