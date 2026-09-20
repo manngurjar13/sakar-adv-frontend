@@ -3,6 +3,8 @@ import { motion } from 'framer-motion'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { fetchAdvertising } from '../../store/slices/advertisingSlice'
+import { fetchCategories } from '../../store/slices/categoriesSlice'
+import { getCategoryLabel } from '../../lib/categories'
 import { getImageUrl } from '../../utils/imageUtils'
 
 const featureCardVariants = {
@@ -26,11 +28,13 @@ const DynamicAdvertisingDetail = () => {
   const navigate = useNavigate()
   const dispatch = useDispatch()
   const { advertising, loading, error } = useSelector((state) => state.advertising)
+  const { categories } = useSelector((state) => state.categories)
 
   useEffect(() => {
     if (advertising.length === 0) {
       dispatch(fetchAdvertising())
     }
+    dispatch(fetchCategories())
   }, [dispatch, advertising.length])
 
   const advertisingItem = advertising.find(
@@ -86,7 +90,7 @@ const DynamicAdvertisingDetail = () => {
   const advertisingTitle = advertisingItem.advertising_name?.str1 || 'Advertising'
   const advertisingSubtitle = advertisingItem.advertising_name?.str2 || ''
   const description = advertisingItem.description || ''
-  const categoryName = advertisingItem.category || 'Advertising'
+  const categoryName = getCategoryLabel(categories, 'advertising', advertisingItem.category, 'Advertising')
   const featureList = advertisingItem.feature || advertisingItem.features || []
   const featureTitle1 = advertisingItem.feature_heading?.str1 || 'Why Choose'
   const featureTitle2 = advertisingItem.feature_heading?.str2 || advertisingTitle

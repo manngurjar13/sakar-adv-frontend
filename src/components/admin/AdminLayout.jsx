@@ -12,6 +12,7 @@ import {
   ArrowRightOnRectangleIcon,
   Cog6ToothIcon,
   ChevronRightIcon,
+  TagIcon,
 } from '@heroicons/react/24/outline'
 import { logoutAdmin } from '../../store/slices/authSlice'
 
@@ -56,6 +57,7 @@ const AdminLayout = ({ children }) => {
         { name: 'Create New Advertising', href: '/admin/advertising/create' }
       ]
     },
+    { name: 'Categories', href: '/admin/categories', icon: TagIcon },
     { name: 'Testimonials', href: '/admin/testimonials', icon: ChatBubbleLeftRightIcon },
     {
       name: 'Portfolio',

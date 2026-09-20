@@ -12,6 +12,7 @@ import eventBannerSlice from './slices/eventBannerSlice'
 import upcomingEventSlice from './slices/upcomingEventSlice'
 import servicesSlice from './slices/servicesSlice'
 import advertisingSlice from './slices/advertisingSlice'
+import categoriesSlice from './slices/categoriesSlice'
 
 const authPersistTransform = createTransform(
   (inboundState) => ({
@@ -50,6 +51,7 @@ const rootReducer = combineReducers({
   upcomingEvents: upcomingEventSlice,
   services: servicesSlice,
   advertising: advertisingSlice,
+  categories: categoriesSlice,
 })
 
 const persistedReducer = persistReducer(persistConfig, rootReducer)

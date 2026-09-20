@@ -2,6 +2,8 @@ import { useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { fetchProducts } from '../../store/slices/productsSlice'
+import { fetchCategories } from '../../store/slices/categoriesSlice'
+import { getCategoryLabel } from '../../lib/categories'
 import { getImageUrl } from '../../utils/imageUtils'
 
 const DynamicProductDetail = () => {
@@ -9,11 +11,13 @@ const DynamicProductDetail = () => {
   const navigate = useNavigate()
   const dispatch = useDispatch()
   const { products, loading, error } = useSelector((state) => state.products)
+  const { categories } = useSelector((state) => state.categories)
 
   useEffect(() => {
     if (products.length === 0) {
       dispatch(fetchProducts())
     }
+    dispatch(fetchCategories())
   }, [dispatch, products.length])
 
   const product = products.find(
@@ -88,7 +92,7 @@ const DynamicProductDetail = () => {
           <div className="text-center max-w-4xl mx-auto">
             <div className="inline-block mb-6">
               <span className="bg-white/20 text-white px-4 py-2 sm:px-6 sm:py-3 rounded-full text-sm sm:text-base md:text-lg font-semibold backdrop-blur-sm">
-                {product.category || 'Product'}
+                {getCategoryLabel(categories, 'product', product.category, 'Product')}
               </span>
             </div>
             <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white mb-6 sm:mb-8 leading-tight">

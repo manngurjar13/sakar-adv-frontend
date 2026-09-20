@@ -8,14 +8,18 @@ import {
   TrashIcon,
 } from '@heroicons/react/24/outline'
 import { fetchProducts, deleteProduct } from '../../store/slices/productsSlice'
+import { fetchCategories } from '../../store/slices/categoriesSlice'
+import { getCategoryLabel } from '../../lib/categories'
 
 const ProductsList = () => {
   const dispatch = useDispatch()
   const { products, loading } = useSelector((state) => state.products)
+  const { categories } = useSelector((state) => state.categories)
   const [deleteConfirm, setDeleteConfirm] = useState(null)
 
   useEffect(() => {
     dispatch(fetchProducts())
+    dispatch(fetchCategories())
   }, [dispatch])
 
   const handleDelete = async (id) => {
@@ -107,7 +111,7 @@ const ProductsList = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className="inline-flex px-3 py-1 text-xs font-semibold leading-5 rounded-full bg-green-100 text-green-800 capitalize">
-                      {product.category}
+                      {getCategoryLabel(categories, 'product', product.category)}
                     </span>
                   </td>
                   <td className="px-6 py-4">

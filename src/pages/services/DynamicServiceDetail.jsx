@@ -3,6 +3,8 @@ import { motion } from 'framer-motion'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { fetchServices } from '../../store/slices/servicesSlice'
+import { fetchCategories } from '../../store/slices/categoriesSlice'
+import { getCategoryLabel } from '../../lib/categories'
 import { getImageUrl } from '../../utils/imageUtils'
 
 const featureCardVariants = {
@@ -27,11 +29,13 @@ const DynamicServiceDetail = () => {
   const dispatch = useDispatch()
   
   const { services, loading, error } = useSelector((state) => state.services)
+  const { categories } = useSelector((state) => state.categories)
   
   useEffect(() => {
     if (services.length === 0) {
       dispatch(fetchServices())
     }
+    dispatch(fetchCategories())
   }, [dispatch, services.length])
 
   // Find service by slug or id
@@ -88,7 +92,7 @@ const DynamicServiceDetail = () => {
   const serviceTitle = service.service_name?.str1 || 'Service'
   const serviceSubtitle = service.service_name?.str2 || ''
   const description = service.description || ''
-  const categoryName = service.category || 'Service'
+  const categoryName = getCategoryLabel(categories, 'service', service.category, 'Service')
   const featureList = service.feature || service.features || []
   const featureTitle1 = service.feature_heading?.str1 || 'Why Choose Our'
   const featureTitle2 = service.feature_heading?.str2 || serviceTitle

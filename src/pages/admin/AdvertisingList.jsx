@@ -8,16 +8,20 @@ import {
   TrashIcon,
 } from '@heroicons/react/24/outline'
 import { fetchAdvertising, deleteAdvertising } from '../../store/slices/advertisingSlice'
+import { fetchCategories } from '../../store/slices/categoriesSlice'
+import { getCategoryLabel } from '../../lib/categories'
 
 const AdvertisingList = () => {
   const dispatch = useDispatch()
   const advertisingState = useSelector((state) => state.advertising)
   const advertising = advertisingState?.advertising || []
   const loading = advertisingState?.loading || false
+  const { categories } = useSelector((state) => state.categories)
   const [deleteConfirm, setDeleteConfirm] = useState(null)
 
   useEffect(() => {
     dispatch(fetchAdvertising())
+    dispatch(fetchCategories())
   }, [dispatch])
 
   const handleDelete = async (id) => {
@@ -101,7 +105,7 @@ const AdvertisingList = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="inline-flex px-3 py-1 text-xs font-semibold leading-5 rounded-full bg-purple-100 text-purple-800 capitalize">
-                        {item.category}
+                        {getCategoryLabel(categories, 'advertising', item.category)}
                       </span>
                     </td>
                     <td className="px-6 py-4">

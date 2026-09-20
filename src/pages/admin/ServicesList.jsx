@@ -9,16 +9,20 @@ import {
   ArrowLeftIcon,
 } from '@heroicons/react/24/outline'
 import { fetchServices, deleteService } from '../../store/slices/servicesSlice'
+import { fetchCategories } from '../../store/slices/categoriesSlice'
+import { getCategoryLabel } from '../../lib/categories'
 
 const ServicesList = () => {
   const dispatch = useDispatch()
   const servicesState = useSelector((state) => state.services)
   const services = servicesState?.services || []
   const loading = servicesState?.loading || false
+  const { categories } = useSelector((state) => state.categories)
   const [deleteConfirm, setDeleteConfirm] = useState(null)
 
   useEffect(() => {
     dispatch(fetchServices())
+    dispatch(fetchCategories())
   }, [dispatch])
 
   const handleDelete = async (id) => {
@@ -105,7 +109,7 @@ const ServicesList = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="inline-flex px-3 py-1 text-xs font-semibold leading-5 rounded-full bg-blue-100 text-blue-800 capitalize">
-                        {service.category}
+                        {getCategoryLabel(categories, 'service', service.category)}
                       </span>
                     </td>
                     <td className="px-6 py-4">

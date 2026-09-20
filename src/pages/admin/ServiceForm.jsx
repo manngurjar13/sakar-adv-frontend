@@ -4,6 +4,8 @@ import { useNavigate, useParams, Link } from 'react-router-dom'
 import { Formik, Form, Field } from 'formik'
 import * as Yup from 'yup'
 import { createService, updateService, fetchServices } from '../../store/slices/servicesSlice'
+import { fetchCategories } from '../../store/slices/categoriesSlice'
+import { getCategorySelectOptions } from '../../lib/categories'
 import { ArrowLeftIcon } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
 
@@ -16,11 +18,14 @@ const ServiceForm = () => {
   const servicesState = useSelector((state) => state.services)
   const services = servicesState?.services || []
   const loading = servicesState?.loading || false
+  const { categories } = useSelector((state) => state.categories)
   
   const service = isEdit ? services.find(s => s._id === id || s.id === parseInt(id)) : null
   const [uploadingImage, setUploadingImage] = useState(null)
+  const categoryOptions = getCategorySelectOptions(categories, 'service', service?.category)
 
   useEffect(() => {
+    dispatch(fetchCategories())
     if (isEdit && !service) {
       dispatch(fetchServices())
     }
@@ -254,13 +259,21 @@ const ServiceForm = () => {
                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm p-2"
                   >
                     <option value="">Select Category</option>
-                    <option value="vehicle branding">Vehicle Branding</option>
-                    <option value="auto rickshaw">Auto Rickshaw</option>
-                    <option value="e-rickshaw">E-Rickshaw</option>
-                    <option value="bus advertising">Bus Advertising</option>
-                    <option value="mobile van">Mobile Van</option>
-                    <option value="wall painting">Wall Painting</option>
+                    {categoryOptions.map((category) => (
+                      <option key={category.id || category.slug} value={category.slug}>
+                        {category.name}
+                      </option>
+                    ))}
                   </Field>
+                  {categoryOptions.length === 0 && (
+                    <p className="mt-1 text-sm text-gray-500">
+                      No categories yet. Create one from{' '}
+                      <Link to="/admin/categories" className="text-blue-700 underline">
+                        Categories
+                      </Link>
+                      .
+                    </p>
+                  )}
                   {errors.category && touched.category && (
                     <p className="mt-1 text-sm text-red-600">{errors.category}</p>
                   )}

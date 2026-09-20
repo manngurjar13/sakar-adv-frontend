@@ -2,19 +2,23 @@ import { useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { fetchEvents } from '../../store/slices/eventsSlice'
+import { fetchCategories } from '../../store/slices/categoriesSlice'
 import { getImageUrl } from '../../utils/imageUtils'
-import { getEventCategoryLabel, getEventColorClass, slugifyEventTitle } from '../../lib/eventCategories'
+import { getCategoryColor, getCategoryLabel } from '../../lib/categories'
+import { slugifyEventTitle } from '../../lib/eventCategories'
 
 const DynamicEventDetail = () => {
   const { slug } = useParams()
   const navigate = useNavigate()
   const dispatch = useDispatch()
   const { events, loading, error } = useSelector((state) => state.events)
+  const { categories } = useSelector((state) => state.categories)
 
   useEffect(() => {
     if (events.length === 0) {
       dispatch(fetchEvents())
     }
+    dispatch(fetchCategories())
   }, [dispatch, events.length])
 
   const event = events.find(
@@ -86,7 +90,7 @@ const DynamicEventDetail = () => {
           <div className="text-center max-w-4xl mx-auto">
             <div className="inline-block mb-6">
               <span className="bg-white/20 text-white px-4 py-2 sm:px-6 sm:py-3 rounded-full text-sm sm:text-base md:text-lg font-semibold backdrop-blur-sm">
-                {getEventCategoryLabel(event.category)}
+                {getCategoryLabel(categories, 'event', event.category)}
               </span>
             </div>
             <h1 className="text-3xl sm:text-4xl lg:text-6xl font-bold text-white mb-6 leading-tight">
@@ -95,7 +99,7 @@ const DynamicEventDetail = () => {
             <p className="text-blue-100 text-base sm:text-lg md:text-xl mb-8 max-w-3xl mx-auto leading-relaxed">
               {event.description}
             </p>
-            <div className={`inline-flex items-center rounded-full bg-gradient-to-r ${getEventColorClass(event.category)} px-6 py-3 text-white font-semibold shadow-xl`}>
+            <div className={`inline-flex items-center rounded-full bg-gradient-to-r ${getCategoryColor(categories, 'event', event.category)} px-6 py-3 text-white font-semibold shadow-xl`}>
               {event.date ? new Date(event.date).toLocaleDateString() : 'Date To Be Announced'}
             </div>
           </div>
@@ -129,7 +133,7 @@ const DynamicEventDetail = () => {
               <div className="grid sm:grid-cols-2 gap-4">
                 <div className="rounded-2xl bg-gray-50 p-5 border border-gray-100">
                   <p className="text-sm text-gray-500 mb-1">Category</p>
-                  <p className="text-base font-semibold text-gray-900">{getEventCategoryLabel(event.category)}</p>
+                  <p className="text-base font-semibold text-gray-900">{getCategoryLabel(categories, 'event', event.category)}</p>
                 </div>
                 <div className="rounded-2xl bg-gray-50 p-5 border border-gray-100">
                   <p className="text-sm text-gray-500 mb-1">Date</p>

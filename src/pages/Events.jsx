@@ -6,8 +6,10 @@ import { Navigation, Pagination, Autoplay } from 'swiper/modules'
 import EventCard from '../components/EventCard'
 import { fetchEvents } from '../store/slices/eventsSlice'
 import { fetchUpcomingEvents } from '../store/slices/upcomingEventSlice'
+import { fetchCategories } from '../store/slices/categoriesSlice'
 import { getImageUrl } from '../utils/imageUtils'
-import { getEventCategoryLabel, getEventColorClass, slugifyEventTitle } from '../lib/eventCategories'
+import { getCategoryColor, getCategoryLabel } from '../lib/categories'
+import { slugifyEventTitle } from '../lib/eventCategories'
 import 'swiper/css'
 import 'swiper/css/navigation'
 import 'swiper/css/pagination'
@@ -41,11 +43,13 @@ const Events = () => {
   const categoryScrollRef = useRef(null)
   const { events, loading: eventsLoading, error: eventsError } = useSelector((state) => state.events)
   const { events: upcomingEvents, loading: upcomingLoading } = useSelector((state) => state.upcomingEvents)
+  const { categories } = useSelector((state) => state.categories)
   const [selectedCategory, setSelectedCategory] = useState('')
 
   useEffect(() => {
     dispatch(fetchEvents())
     dispatch(fetchUpcomingEvents())
+    dispatch(fetchCategories())
   }, [dispatch])
 
   const displayEvents = useMemo(
@@ -56,13 +60,13 @@ const Events = () => {
   const displayUpcomingEvents = upcomingEvents || []
 
   const eventCategories = useMemo(() => {
-    const categories = Array.from(new Set(displayEvents.map((event) => event.category).filter(Boolean)))
-    return categories.map((category) => ({
+    const uniqueCategories = Array.from(new Set(displayEvents.map((event) => event.category).filter(Boolean)))
+    return uniqueCategories.map((category) => ({
       value: category,
-      label: getEventCategoryLabel(category),
-      colorClass: getEventColorClass(category),
+      label: getCategoryLabel(categories, 'event', category),
+      colorClass: getCategoryColor(categories, 'event', category),
     }))
-  }, [displayEvents])
+  }, [displayEvents, categories])
 
   useEffect(() => {
     if (!selectedCategory && eventCategories.length > 0) {
@@ -232,7 +236,7 @@ const Events = () => {
                     title: event.name || event.title,
                     image: getImageUrl(event.image),
                     date: event.date ? new Date(event.date).toLocaleDateString() : 'TBA',
-                    color: getEventColorClass(event.category),
+                    color: getCategoryColor(categories, 'event', event.category),
                   }}
                   onClick={() => navigate(`/events/${event.slug || slugifyEventTitle(event.title || event.name)}`)}
                 />

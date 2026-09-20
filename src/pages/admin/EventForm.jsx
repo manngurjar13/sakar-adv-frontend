@@ -5,9 +5,11 @@ import { Formik, Form, Field } from 'formik'
 import * as Yup from 'yup'
 import toast from 'react-hot-toast'
 import { createEvent, updateEvent, fetchEvents } from '../../store/slices/eventsSlice'
+import { fetchCategories } from '../../store/slices/categoriesSlice'
 import { getImageUrl } from '../../utils/imageUtils'
 import { ArrowLeftIcon } from '@heroicons/react/24/outline'
-import { EVENT_CATEGORY_OPTIONS, normalizeEventCategory } from '../../lib/eventCategories'
+import { getCategorySelectOptions } from '../../lib/categories'
+import { normalizeEventCategory } from '../../lib/eventCategories'
 
 const EventForm = () => {
   const dispatch = useDispatch()
@@ -16,9 +18,12 @@ const EventForm = () => {
   const isEdit = Boolean(id)
   
   const { events, loading } = useSelector((state) => state.events)
+  const { categories } = useSelector((state) => state.categories)
   const event = events.find((item) => item.id === id || item._id === id)
+  const categoryOptions = getCategorySelectOptions(categories, 'event', event?.category)
 
   useEffect(() => {
+    dispatch(fetchCategories())
     if (isEdit && !event) {
       dispatch(fetchEvents())
     }
@@ -35,7 +40,7 @@ const EventForm = () => {
   const initialValues = {
     name: event?.name || '',
     description: event?.description || '',
-    category: event?.category || 'corporate',
+    category: event?.category || categoryOptions[0]?.slug || '',
     date: event?.date || '',
     backgroundImage: event?.backgroundImage || null,
   }
@@ -143,12 +148,21 @@ const EventForm = () => {
                     className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                   >
                     <option value="">Select Category</option>
-                    {EVENT_CATEGORY_OPTIONS.map((category) => (
-                      <option key={category.value} value={category.value}>
-                        {category.label}
+                    {categoryOptions.map((category) => (
+                      <option key={category.id || category.slug} value={category.slug}>
+                        {category.name}
                       </option>
                     ))}
                   </Field>
+                  {categoryOptions.length === 0 && (
+                    <p className="mt-1 text-sm text-gray-500">
+                      No categories yet. Create one from{' '}
+                      <Link to="/admin/categories" className="text-blue-700 underline">
+                        Categories
+                      </Link>
+                      .
+                    </p>
+                  )}
                   {errors.category && touched.category && (
                     <p className="mt-1 text-sm text-red-600">{errors.category}</p>
                   )}

@@ -11,19 +11,28 @@ import {
   CalendarDaysIcon,
 } from '@heroicons/react/24/outline'
 import { fetchEvents, deleteEvent, createEvent, updateEvent } from '../../store/slices/eventsSlice'
+import { fetchCategories } from '../../store/slices/categoriesSlice'
 import { getImageUrl } from '../../utils/imageUtils'
-import { EVENT_CATEGORY_OPTIONS, getEventCategoryLabel, normalizeEventCategory } from '../../lib/eventCategories'
+import { getCategoryLabel, getCategorySelectOptions } from '../../lib/categories'
+import { normalizeEventCategory } from '../../lib/eventCategories'
 
 const EventsList = () => {
   const dispatch = useDispatch()
   const { events, loading } = useSelector((state) => state.events)
+  const { categories } = useSelector((state) => state.categories)
   const [showModal, setShowModal] = useState(false)
   const [editingEvent, setEditingEvent] = useState(null)
   const [viewingEvent, setViewingEvent] = useState(null)
   const [deleteConfirm, setDeleteConfirm] = useState(null)
+  const categoryOptions = getCategorySelectOptions(
+    categories,
+    'event',
+    editingEvent?.category || viewingEvent?.category
+  )
 
   useEffect(() => {
     dispatch(fetchEvents())
+    dispatch(fetchCategories())
   }, [dispatch])
 
   const handleDelete = async (id) => {
@@ -36,8 +45,6 @@ const EventsList = () => {
       toast.error('Failed to delete event. Please try again.')
     }
   }
-
-  const categories = EVENT_CATEGORY_OPTIONS
 
   const getValidationSchema = (isEdit) => Yup.object({
     name: Yup.string().required('Event title is required'),
@@ -181,7 +188,7 @@ const EventsList = () => {
                             ? 'bg-purple-100 text-purple-800'
                             : 'bg-gray-100 text-gray-800'
                         }`}>
-                          {getEventCategoryLabel(event.category)}
+                          {getCategoryLabel(categories, 'event', event.category)}
                         </span>
                       </div>
                     </div>
@@ -241,12 +248,13 @@ const EventsList = () => {
                 initialValues={{
                   name: editingEvent?.name || '',
                   description: editingEvent?.description || '',
-                  category: editingEvent?.category || 'corporate',
+                  category: editingEvent?.category || categoryOptions[0]?.slug || '',
                   date: formatDateForInput(editingEvent?.date) || '',
                   backgroundImage: null
                 }}
                 validationSchema={getValidationSchema(!!editingEvent)}
                 onSubmit={handleSubmit}
+                enableReinitialize
               >
                 {({ errors, touched, isSubmitting }) => (
                   <Form className="space-y-4">
@@ -281,12 +289,17 @@ const EventsList = () => {
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         >
                           <option value="">Select Category</option>
-                          {categories.map((category) => (
-                            <option key={category.value} value={category.value}>
-                              {category.label}
+                          {categoryOptions.map((category) => (
+                            <option key={category.id || category.slug} value={category.slug}>
+                              {category.name}
                             </option>
                           ))}
                         </Field>
+                        {categoryOptions.length === 0 && (
+                          <p className="mt-1 text-sm text-gray-500">
+                            No categories yet. Create one from Categories.
+                          </p>
+                        )}
                         {errors.category && touched.category && (
                           <p className="mt-1 text-sm text-red-600">{errors.category}</p>
                         )}
@@ -466,7 +479,7 @@ const EventsList = () => {
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Category</p>
-                    <p className="text-gray-900 font-medium">{viewingEvent.category}</p>
+                    <p className="text-gray-900 font-medium">{getCategoryLabel(categories, 'event', viewingEvent.category)}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Date</p>

@@ -41,6 +41,7 @@ import AdvertisingForm from "./pages/admin/AdvertisingForm";
 import DynamicAdvertisingDetail from "./pages/advertising/DynamicAdvertisingDetail";
 import ProductsList from "./pages/admin/ProductsList";
 import ProductForm from "./pages/admin/ProductForm";
+import CategoriesList from "./pages/admin/CategoriesList";
 import DynamicProductDetail from "./pages/products/DynamicProductDetail";
 
 // Public service subpages
@@ -291,6 +292,17 @@ function App() {
                   <ProtectedRoute>
                     <AdminLayout>
                       <UpcomingEventList />
+                    </AdminLayout>
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/admin/categories"
+                element={
+                  <ProtectedRoute>
+                    <AdminLayout>
+                      <CategoriesList />
                     </AdminLayout>
                   </ProtectedRoute>
                 }

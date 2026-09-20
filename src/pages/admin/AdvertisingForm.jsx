@@ -4,6 +4,8 @@ import { useNavigate, useParams, Link } from 'react-router-dom'
 import { Formik, Form, Field } from 'formik'
 import * as Yup from 'yup'
 import { createAdvertising, updateAdvertising, fetchAdvertising } from '../../store/slices/advertisingSlice'
+import { fetchCategories } from '../../store/slices/categoriesSlice'
+import { getCategorySelectOptions } from '../../lib/categories'
 import { ArrowLeftIcon } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
 
@@ -16,11 +18,14 @@ const AdvertisingForm = () => {
   const advertisingState = useSelector((state) => state.advertising)
   const advertising = advertisingState?.advertising || []
   const loading = advertisingState?.loading || false
+  const { categories } = useSelector((state) => state.categories)
 
   const advertisingItem = isEdit ? advertising.find((item) => item._id === id || item.id === id) : null
   const [uploadingImage, setUploadingImage] = useState(null)
+  const categoryOptions = getCategorySelectOptions(categories, 'advertising', advertisingItem?.category)
 
   useEffect(() => {
+    dispatch(fetchCategories())
     if (isEdit && !advertisingItem) {
       dispatch(fetchAdvertising())
     }
@@ -235,14 +240,21 @@ const AdvertisingForm = () => {
                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500 sm:text-sm p-2"
                   >
                     <option value="">Select Category</option>
-                    <option value="outdoor hoardings">Outdoor Hoardings</option>
-                    <option value="billboard advertising">Billboard Advertising</option>
-                    <option value="festival banners">Festival Banners</option>
-                    <option value="field activation">Field Activation</option>
-                    <option value="btl campaigns">BTL Campaigns</option>
-                    <option value="digital advertising">Digital Advertising</option>
-                    <option value="print advertising">Print Advertising</option>
+                    {categoryOptions.map((category) => (
+                      <option key={category.id || category.slug} value={category.slug}>
+                        {category.name}
+                      </option>
+                    ))}
                   </Field>
+                  {categoryOptions.length === 0 && (
+                    <p className="mt-1 text-sm text-gray-500">
+                      No categories yet. Create one from{' '}
+                      <Link to="/admin/categories" className="text-purple-700 underline">
+                        Categories
+                      </Link>
+                      .
+                    </p>
+                  )}
                   {errors.category && touched.category && (
                     <p className="mt-1 text-sm text-red-600">{errors.category}</p>
                   )}

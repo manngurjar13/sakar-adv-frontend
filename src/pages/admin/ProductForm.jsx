@@ -4,6 +4,8 @@ import { useNavigate, useParams, Link } from 'react-router-dom'
 import { Formik, Form, Field } from 'formik'
 import * as Yup from 'yup'
 import { createProduct, updateProduct, fetchProducts } from '../../store/slices/productsSlice'
+import { fetchCategories } from '../../store/slices/categoriesSlice'
+import { getCategorySelectOptions } from '../../lib/categories'
 import { ArrowLeftIcon } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
 
@@ -14,10 +16,13 @@ const ProductForm = () => {
   const isEdit = Boolean(id)
   
   const { products, loading } = useSelector((state) => state.products)
+  const { categories } = useSelector((state) => state.categories)
   const product = products.find((item) => item.id === id || item._id === id)
   const [uploadingImage, setUploadingImage] = useState(false)
+  const categoryOptions = getCategorySelectOptions(categories, 'product', product?.category)
 
   useEffect(() => {
+    dispatch(fetchCategories())
     if (isEdit && !product) {
       dispatch(fetchProducts())
     }
@@ -219,13 +224,21 @@ const ProductForm = () => {
                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm p-2"
                   >
                     <option value="">Select Category</option>
-                    <option value="no parking boards">No Parking Boards</option>
-                    <option value="roll up banners">Roll-Up Banners</option>
-                    <option value="promo tables">Promo Tables</option>
-                    <option value="led signage">LED Signage</option>
-                    <option value="flex printing">Flex Printing</option>
-                    <option value="glow signs">Glow Signs</option>
+                    {categoryOptions.map((category) => (
+                      <option key={category.id || category.slug} value={category.slug}>
+                        {category.name}
+                      </option>
+                    ))}
                   </Field>
+                  {categoryOptions.length === 0 && (
+                    <p className="mt-1 text-sm text-gray-500">
+                      No categories yet. Create one from{' '}
+                      <Link to="/admin/categories" className="text-green-700 underline">
+                        Categories
+                      </Link>
+                      .
+                    </p>
+                  )}
                   {errors.category && touched.category && (
                     <p className="mt-1 text-sm text-red-600">{errors.category}</p>
                   )}
